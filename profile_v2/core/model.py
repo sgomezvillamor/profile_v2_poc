@@ -1,19 +1,25 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import (
+    Any,
     Dict,
     List,
     Optional,
 )
 from enum import Enum
+from typing import TypeAlias
 
 
 class ProfileStatisticType(Enum):
     DISTINCT_COUNT = "distinct_count"
 
+StatisticName: TypeAlias = str
+StatisticFQName: TypeAlias = str
+
 @dataclass
 class StatisticSpec:
-    name: str  # Name of the statistic
+    name: StatisticName
+    fq_name: StatisticFQName
 
 @dataclass
 class CustomStatistic(StatisticSpec):
@@ -54,11 +60,9 @@ class ProfileRequest:
     statistics: List[StatisticSpec]
     batch: BatchSpec
 
+StatisticResult: TypeAlias = Any
+
 @dataclass
 class ProfileResponse:
-    # TODO: Define the response data structure
-    # - oversimplified by assuming all statistics results are a single float value
-    data: Dict[str, float] = field(default_factory=defaultdict) # key = StatisticSpec.name, value = calculated statistic
+    data: Dict[StatisticFQName, StatisticResult] = field(default_factory=defaultdict)
     errors: List[str] = field(default_factory=list)
-
-

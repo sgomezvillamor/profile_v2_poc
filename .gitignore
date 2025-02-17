@@ -136,6 +136,9 @@ ENV/
 env.bak/
 venv.bak/
 
+.snowflake.env
+
+
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -169,3 +172,9 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+
+
+# intellij
+*.iml
+.idea/

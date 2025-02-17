@@ -4,12 +4,13 @@ import os
 
 from profile_v2.core.model import (
     BatchSpec,
+    CustomStatistic,
     DataSource,
     ProfileRequest,
     ProfileStatisticType,
     TypedStatistic,
 )
-from profile_v2.core.sqla.sqlalchemy import do_profile_sqlalchemy
+from profile_v2.core.sqlalchemy.sqlalchemy import do_profile_sqlalchemy
 
 
 SNOWFLAKE_USER=urllib.parse.quote(os.environ["SNOWFLAKE_USER"])
@@ -33,13 +34,31 @@ class SqlAlchemyTest(unittest.TestCase):
             request=ProfileRequest(
                 statistics=[
                     TypedStatistic(
-                        name="distinct_count",
-                        columns=["name"],
+                        name=ProfileStatisticType.DISTINCT_COUNT.value,
+                        fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count",
+                        columns=["ID"],
                         statistic=ProfileStatisticType.DISTINCT_COUNT,
-                    )
+                    ),
+                    TypedStatistic(
+                        name=ProfileStatisticType.DISTINCT_COUNT.value,
+                        fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.distinct_count",
+                        columns=["LABEL"],
+                        statistic=ProfileStatisticType.DISTINCT_COUNT,
+                    ),
+                    TypedStatistic(
+                        name=ProfileStatisticType.DISTINCT_COUNT.value,
+                        fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID+LABEL.distinct_count",
+                        columns=["ID", "LABEL"],
+                        statistic=ProfileStatisticType.DISTINCT_COUNT,
+                    ),
+                    CustomStatistic(
+                        name="custom_average_str_length",
+                        fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.custom_average_str_length",
+                        sql="AVG(LEN(LABEL))",
+                    ),
                 ],
                 batch=BatchSpec(
-                    fully_qualified_dataset_name="smoke_test_db.public.person_distinct_names"
+                    fully_qualified_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE"
                 )
             ),
         )
