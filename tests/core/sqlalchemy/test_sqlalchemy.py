@@ -7,6 +7,7 @@ from profile_v2.core.model import (
     CustomStatistic,
     DataSource,
     ProfileRequest,
+    ProfileResponse,
     ProfileStatisticType,
     TypedStatistic,
 )
@@ -54,7 +55,7 @@ class SqlAlchemyTest(unittest.TestCase):
                     CustomStatistic(
                         name="custom_average_str_length",
                         fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.custom_average_str_length",
-                        sql="AVG(LEN(LABEL))",
+                        sql="CEIL(AVG(LEN(LABEL)))",
                     ),
                 ],
                 batch=BatchSpec(
@@ -63,6 +64,15 @@ class SqlAlchemyTest(unittest.TestCase):
             ),
         )
         print(result)
+        assert result == ProfileResponse(
+            data={
+                'SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.DISTINCT_COUNT': 398880,
+                'SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.DISTINCT_COUNT': 5,
+                'SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID+LABEL.DISTINCT_COUNT': 398880,
+                'SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.CUSTOM_AVERAGE_STR_LENGTH': 7,
+            },
+            errors=[],
+        )
 
 
 if __name__ == '__main__':

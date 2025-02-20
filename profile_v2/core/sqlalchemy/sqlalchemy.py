@@ -21,29 +21,29 @@ def do_profile_sqlalchemy(datasource: DataSource, request: ProfileRequest) -> Pr
 
     table_name = request.batch.fully_qualified_dataset_name
 
-    select_queries = []
+    select_columns = []
     for statistic in request.statistics:
         fq_name = statistic.fq_name
         if isinstance(statistic, TypedStatistic):
             if statistic.statistic == ProfileStatisticType.DISTINCT_COUNT:
-                columns = f"COUNT(DISTINCT {','.join([col for col in statistic.columns])})"
-                select_query = f"SELECT '{fq_name}' AS fq_name,  {columns} AS value FROM {table_name}"
-                select_queries.append(select_query)
+                column = f"COUNT(DISTINCT {','.join([col for col in statistic.columns])}) AS `{fq_name}`"
+                select_columns.append(column)
         elif isinstance(statistic, CustomStatistic):
-            select_query = f"SELECT '{fq_name}' AS fq_name, {statistic.sql} AS value FROM {table_name}"
-            select_queries.append(select_query)
+            column = f"{statistic.sql} AS `{fq_name}`"
+            select_columns.append(column)
         else:
             raise ValueError(f"Unsupported statistic spec: {statistic}")
 
-    if select_queries:
-        union_all_query = " UNION ALL ".join(select_queries)
-        logger.info(union_all_query)
+    if select_columns:
+        select_query = f"SELECT {', '.join(select_columns)} FROM {request.batch.fully_qualified_dataset_name}"
+        logger.info(select_query)
         with engine.connect() as conn:
-            result = conn.execute(text(union_all_query))
-            rows = result.fetchall()
-            for row in rows:
-                logger.info(row)
-                fq_name = row[0]
-                response.data[fq_name] = row[1]
+            result = conn.execute(text(select_query))
+            row = result.fetchone()
+            logger.info(row)
+            if row:
+                for column, value in zip(row._fields, row._data):
+                    column = column.strip('`')
+                    response.data[column] = value
 
     return response
