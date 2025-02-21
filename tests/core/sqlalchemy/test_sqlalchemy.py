@@ -9,6 +9,7 @@ from profile_v2.core.model import (
     ProfileRequest,
     ProfileResponse,
     ProfileStatisticType,
+    SampleSpec,
     TypedStatistic,
 )
 from profile_v2.core.sqlalchemy.sqlalchemy import do_profile_sqlalchemy
@@ -74,6 +75,36 @@ class SqlAlchemyTest(unittest.TestCase):
             errors=[],
         )
 
+    def test_sample(self):
+        result = do_profile_sqlalchemy(
+            datasource=DataSource(
+                name="snowflake",
+                connection_string=SNOWFLAKE_CONNECTION_STRING,
+            ),
+            request=ProfileRequest(
+                statistics=[
+                    TypedStatistic(
+                        name=ProfileStatisticType.DISTINCT_COUNT.value,
+                        fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count",
+                        columns=["ID"],
+                        statistic=ProfileStatisticType.DISTINCT_COUNT,
+                    ),
+                ],
+                batch=BatchSpec(
+                    fully_qualified_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE",
+                    sample=SampleSpec(
+                        size=100,
+                    )
+                )
+            ),
+        )
+        print(result)
+        assert result == ProfileResponse(
+            data={
+                'SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.DISTINCT_COUNT': 100,
+            },
+            errors=[],
+        )
 
 if __name__ == '__main__':
     unittest.main()

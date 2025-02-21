@@ -35,7 +35,10 @@ def do_profile_sqlalchemy(datasource: DataSource, request: ProfileRequest) -> Pr
             raise ValueError(f"Unsupported statistic spec: {statistic}")
 
     if select_columns:
-        select_query = f"SELECT {', '.join(select_columns)} FROM {request.batch.fully_qualified_dataset_name}"
+        from_statement = f"FROM {request.batch.fully_qualified_dataset_name}"
+        if request.batch.sample:
+            from_statement += f" TABLESAMPLE ({request.batch.sample.size} ROWS)"
+        select_query = f"SELECT {', '.join(select_columns)} {from_statement}"
         logger.info(select_query)
         with engine.connect() as conn:
             result = conn.execute(text(select_query))
