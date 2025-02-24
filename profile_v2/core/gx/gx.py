@@ -56,6 +56,11 @@ def do_profile_gx(datasource: DataSource, request: ProfileRequest) -> ProfileRes
 
     for result in validation_results.results:
         response.data[result.expectation_config.meta['fq_name']] = result.result['observed_value']
+        # instead, with Metrics API
+        assert result.get_metric(
+            metric_name=result.expectation_config.type + '.result.observed_value',
+            column=result.expectation_config.kwargs['column']
+        ) == result.result["observed_value"]
 
     return response
 
