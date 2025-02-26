@@ -34,7 +34,7 @@ class BigQueryInformationSchemaProfileEngine(ProfileEngine):
 
     Everything else is unsupported.
 
-    Requests are processed in batches by BigQuery dataset.
+    While requests can span for multiple bigquery tables and datasets, requests are internally processed in batches by dataset.
     """
 
     def do_profile(
@@ -60,7 +60,7 @@ class BigQueryInformationSchemaProfileEngine(ProfileEngine):
             predicate=BigQueryUtils.bigquerydataset_from_batch_spec,
         )
 
-        assert datasource.extra_config.get(
+        assert datasource.extra_config and datasource.extra_config.get(
             "credentials_path"
         ), "credentials_path is required for BigQuery"
         engine = create_engine(
