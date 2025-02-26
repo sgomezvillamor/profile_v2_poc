@@ -4,7 +4,9 @@ from typing import List
 from sqlalchemy import create_engine, text
 
 from profile_v2.core.api import ProfileEngine
-from profile_v2.core.model import (CustomStatistic, DataSource, ProfileRequest,
+from profile_v2.core.model import (CustomStatistic, DataSource,
+                                   FailureStatisticResult,
+                                   FailureStatisticResultType, ProfileRequest,
                                    ProfileResponse, ProfileStatisticType,
                                    StatisticSpec, SuccessStatisticResult,
                                    TypedStatistic)
@@ -31,7 +33,11 @@ class SqlAlchemyProfileEngine(ProfileEngine):
                 column = f"{statistic.sql} AS `{fq_name}`"
                 select_columns.append(column)
             else:
-                assert False, f"Unsupported statistic spec: {statistic}"
+                logger.warning(f"Unsupported statistic spec: {statistic}")
+                response.data[fq_name] = FailureStatisticResult(
+                    type=FailureStatisticResultType.UNSUPPORTED,
+                    message=f"Unsupported statistic spec: {statistic}",
+                )
 
         if select_columns:
             from_statement = f"FROM {request.batch.fully_qualified_dataset_name}"
