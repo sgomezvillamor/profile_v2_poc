@@ -82,7 +82,9 @@ class ModelCollections:
 class SequentialFallbackProfileEngine(ProfileEngine):
     """
     Profile engine that will try to profile the data using the engines in order.
-    If an engine fails, the next engine will try to profile the remaining requests.
+
+    Requests are processed by the first engine and only the failed/unsupported ones will be tried with the next one.
+    And so on, until no more pending requests or no more engines.
     """
 
     def __init__(self, engines: List[ProfileEngine]):
