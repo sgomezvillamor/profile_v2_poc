@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, TypeAlias
 
 class ProfileStatisticType(Enum):
     COLUMN_DISTINCT_COUNT = "column_distinct_count"
+    TABLE_ROW_COUNT = "table_row_count"
 
 
 StatisticName: TypeAlias = str
@@ -54,7 +55,7 @@ class DataSource:
 
 @dataclass
 class BatchSpec:
-    fully_qualified_dataset_name: str  # Fully qualified name for the target dataset
+    fq_dataset_name: str  # Fully qualified name for the target dataset
     partitions: Optional[PartitionsSpec] = None  # Partitions specification
     sample: Optional[SampleSpec] = None  # Sample specification
 

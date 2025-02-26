@@ -29,9 +29,9 @@ class GxProfileEngine(ProfileEngine):
         for request in requests:
             table_data_asset = data_source.add_table_asset(
                 table_name=GxProfileEngine._table_name_from_fq_name(
-                    request.batch.fully_qualified_dataset_name
+                    request.batch.fq_dataset_name
                 ),
-                name=request.batch.fully_qualified_dataset_name,
+                name=request.batch.fq_dataset_name,
             )
             logger.info(f"Table data asset added: {table_data_asset}")
             if request.batch.sample:

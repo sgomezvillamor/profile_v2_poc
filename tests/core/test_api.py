@@ -42,7 +42,7 @@ def test_api_distinct_count(engine_cls):
                     ),
                 ],
                 batch=BatchSpec(
-                    fully_qualified_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE"
+                    fq_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE"
                 ),
             )
         ],
@@ -83,7 +83,7 @@ def test_api_distinct_count_multiple(engine_cls):
                     ),
                 ],
                 batch=BatchSpec(
-                    fully_qualified_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE"
+                    fq_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE"
                 ),
             )
         ],
@@ -120,7 +120,7 @@ def test_api_custom_statistic(engine_cls):
                     ),
                 ],
                 batch=BatchSpec(
-                    fully_qualified_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE"
+                    fq_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE"
                 ),
             )
         ],
@@ -174,7 +174,7 @@ def test_api_sample(engine_cls):
                     ),
                 ],
                 batch=BatchSpec(
-                    fully_qualified_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE",
+                    fq_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE",
                     sample=SampleSpec(
                         size=100,
                     ),

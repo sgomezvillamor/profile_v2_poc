@@ -41,7 +41,7 @@ class SqlAlchemyProfileEngine(ProfileEngine):
                     )
 
             if select_columns:
-                from_statement = f"FROM {request.batch.fully_qualified_dataset_name}"
+                from_statement = f"FROM {request.batch.fq_dataset_name}"
                 if request.batch.sample:
                     from_statement += f" TABLESAMPLE ({request.batch.sample.size} ROWS)"
                 select_query = f"SELECT {', '.join(select_columns)} {from_statement}"
