@@ -11,7 +11,7 @@ from profile_v2.core.utils import (ModelCollections,
                                    SequentialFallbackProfileEngine)
 
 
-class ModelCollectionsTest(unittest.TestCase):
+class TestModelCollections(unittest.TestCase):
 
     def test_split_requests_by_statistics_and_grouped_results(self):
         requests = [

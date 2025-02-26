@@ -51,6 +51,7 @@ class PartitionsSpec:
 class DataSource:
     name: str  # TODO: enum?
     connection_string: str  # eg: snowflake://<USER_NAME>:<PASSWORD>@<ACCOUNT_NAME>/<DATABASE_NAME>/<SCHEMA_NAME>?warehouse=<WAREHOUSE_NAME>&role=<ROLE_NAME>&application=datahub
+    extra_config: Optional[Dict[str, Any]] = None
 
 
 @dataclass

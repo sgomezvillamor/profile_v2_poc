@@ -3,6 +3,7 @@ sqlalchemy >= 2.0.0
 
 # sqlalchemy dialects
 snowflake-sqlalchemy
+sqlalchemy-bigquery
 
 
 
