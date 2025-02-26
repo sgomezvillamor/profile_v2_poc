@@ -11,6 +11,7 @@ from profile_v2.core.model import (
     ProfileResponse,
     ProfileStatisticType,
     StatisticSpec,
+    SuccessStatisticResult,
     TypedStatistic,
 )
 from profile_v2.core.api import (
@@ -22,16 +23,14 @@ logger = logging.getLogger(__name__)
 class SqlAlchemyProfileEngine(ProfileEngine):
 
     def do_profile(self, datasource: DataSource, request: ProfileRequest) -> ProfileResponse:
-        response = ProfileResponse(data={}, errors=[])
+        response = ProfileResponse()
         engine = create_engine(datasource.connection_string)
-
-        table_name = request.batch.fully_qualified_dataset_name
 
         select_columns = []
         for statistic in request.statistics:
             fq_name = statistic.fq_name
             if isinstance(statistic, TypedStatistic):
-                if statistic.statistic == ProfileStatisticType.DISTINCT_COUNT:
+                if statistic.type == ProfileStatisticType.DISTINCT_COUNT:
                     column = f"COUNT(DISTINCT {','.join([col for col in statistic.columns])}) AS `{fq_name}`"
                     select_columns.append(column)
             elif isinstance(statistic, CustomStatistic):
@@ -54,7 +53,7 @@ class SqlAlchemyProfileEngine(ProfileEngine):
                     for column, value in zip(row._fields, row._data):
                         column = column.strip('`')
                         fq_name = SqlAlchemyProfileEngine._find_fq_name_to_preserve_casing(request.statistics, column)
-                        response.data[fq_name] = value
+                        response.data[fq_name] = SuccessStatisticResult(value=value)
 
         return response
 

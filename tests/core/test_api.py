@@ -6,10 +6,13 @@ from profile_v2.core.model import (
     BatchSpec,
     CustomStatistic,
     DataSource,
+    FailureStatisticResult,
+    FailureStatisticResultType,
     ProfileRequest,
     ProfileResponse,
     ProfileStatisticType,
     SampleSpec,
+    SuccessStatisticResult,
     TypedStatistic,
 )
 from profile_v2.core.gx.gx import (
@@ -45,7 +48,7 @@ def test_api_distinct_count(engine_cls):
                     name=ProfileStatisticType.DISTINCT_COUNT.value,
                     fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count",
                     columns=["ID"],
-                    statistic=ProfileStatisticType.DISTINCT_COUNT,
+                    type=ProfileStatisticType.DISTINCT_COUNT,
                 ),
             ],
             batch=BatchSpec(
@@ -56,9 +59,8 @@ def test_api_distinct_count(engine_cls):
     print(result)
     assert result == ProfileResponse(
         data={
-            'SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count': 398880,
+            'SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count': SuccessStatisticResult(value=398880),
         },
-        errors=[],
     )
 
 @pytest.mark.parametrize("engine_cls", [GxProfileEngine, SqlAlchemyProfileEngine])
@@ -76,13 +78,13 @@ def test_api_distinct_count_multiple(engine_cls):
                     name=ProfileStatisticType.DISTINCT_COUNT.value,
                     fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count",
                     columns=["ID"],
-                    statistic=ProfileStatisticType.DISTINCT_COUNT,
+                    type=ProfileStatisticType.DISTINCT_COUNT,
                 ),
                 TypedStatistic(
                     name=ProfileStatisticType.DISTINCT_COUNT.value,
                     fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.distinct_count",
                     columns=["LABEL"],
-                    statistic=ProfileStatisticType.DISTINCT_COUNT,
+                    type=ProfileStatisticType.DISTINCT_COUNT,
                 ),
             ],
             batch=BatchSpec(
@@ -93,10 +95,9 @@ def test_api_distinct_count_multiple(engine_cls):
     print(result)
     assert result == ProfileResponse(
         data={
-            'SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count': 398880,
-            'SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.distinct_count': 5,
+            'SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count': SuccessStatisticResult(value=398880),
+            'SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.distinct_count': SuccessStatisticResult(value=5),
         },
-        errors=[],
     )
 
 @pytest.mark.parametrize("engine_cls", [GxProfileEngine, SqlAlchemyProfileEngine])
@@ -122,12 +123,20 @@ def test_api_custom_statistic(engine_cls):
         ),
     )
     print(result)
-    assert result == ProfileResponse(
-        data={
-            'SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.custom_average_str_length': 7,
-        },
-        errors=[],
-    )
+
+    assert len(result.data) == 1
+
+    if engine_cls == GxProfileEngine:
+        assert isinstance(result.data['SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.custom_average_str_length'], FailureStatisticResult)
+        assert result.data['SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.custom_average_str_length'].type == FailureStatisticResultType.UNSUPPORTED
+    elif engine_cls == SqlAlchemyProfileEngine:
+        assert result == ProfileResponse(
+            data={
+                'SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.custom_average_str_length': SuccessStatisticResult(value=7),
+            },
+        )
+    else:
+        assert False, "Unknown engine"
 
 @pytest.mark.parametrize("engine_cls", [GxProfileEngine, SqlAlchemyProfileEngine])
 def test_api_sample(engine_cls):
@@ -144,7 +153,7 @@ def test_api_sample(engine_cls):
                     name=ProfileStatisticType.DISTINCT_COUNT.value,
                     fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count",
                     columns=["ID"],
-                    statistic=ProfileStatisticType.DISTINCT_COUNT,
+                    type=ProfileStatisticType.DISTINCT_COUNT,
                 ),
             ],
             batch=BatchSpec(
@@ -156,9 +165,17 @@ def test_api_sample(engine_cls):
         ),
     )
     print(result)
-    assert result == ProfileResponse(
-        data={
-            'SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count': 100,
-        },
-        errors=[],
-    )
+
+    assert len(result.data) == 1
+
+    if engine_cls == GxProfileEngine:
+        assert isinstance(result.data['SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count'], FailureStatisticResult)
+        assert result.data['SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count'].type == FailureStatisticResultType.UNSUPPORTED
+    elif engine_cls == SqlAlchemyProfileEngine:
+        assert result == ProfileResponse(
+            data={
+                'SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count': SuccessStatisticResult(value=100),
+            },
+        )
+    else:
+        assert False, "Unknown engine"

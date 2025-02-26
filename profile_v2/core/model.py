@@ -28,7 +28,7 @@ class CustomStatistic(StatisticSpec):
 @dataclass
 class TypedStatistic(StatisticSpec):
     columns: List[str]  # Target columns to calculate the statistic
-    statistic: ProfileStatisticType  # Type of the statistic
+    type: ProfileStatisticType  # Type of the statistic
     approximate: bool = False  # Whether to calculate the statistic approximately
 
 @dataclass
@@ -46,7 +46,7 @@ class PartitionsSpec:
 
 @dataclass
 class DataSource:
-    name: str  # TODO: enum
+    name: str  # TODO: enum?
     connection_string: str  # eg: snowflake://<USER_NAME>:<PASSWORD>@<ACCOUNT_NAME>/<DATABASE_NAME>/<SCHEMA_NAME>?warehouse=<WAREHOUSE_NAME>&role=<ROLE_NAME>&application=datahub
 
 @dataclass
@@ -60,9 +60,24 @@ class ProfileRequest:
     statistics: List[StatisticSpec]
     batch: BatchSpec
 
-StatisticResult: TypeAlias = Any
+@dataclass
+class StatisticResult:
+    pass
+
+@dataclass
+class SuccessStatisticResult(StatisticResult):
+    value: Any
+
+class FailureStatisticResultType(Enum):
+    FAILURE = "failure"
+    UNSUPPORTED = "unsupported"
+
+@dataclass
+class FailureStatisticResult(StatisticResult):
+    type: FailureStatisticResultType
+    message: Optional[str] = None
+    exception: Optional[Exception] = None
 
 @dataclass
 class ProfileResponse:
     data: Dict[StatisticFQName, StatisticResult] = field(default_factory=defaultdict)
-    errors: List[str] = field(default_factory=list)
