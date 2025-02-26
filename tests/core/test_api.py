@@ -31,19 +31,21 @@ def test_api_distinct_count(engine_cls):
             name="snowlake",
             connection_string=SNOWFLAKE_CONNECTION_STRING,
         ),
-        request=ProfileRequest(
-            statistics=[
-                TypedStatistic(
-                    name=ProfileStatisticType.DISTINCT_COUNT.value,
-                    fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count",
-                    columns=["ID"],
-                    type=ProfileStatisticType.DISTINCT_COUNT,
+        requests=[
+            ProfileRequest(
+                statistics=[
+                    TypedStatistic(
+                        name=ProfileStatisticType.COLUMN_DISTINCT_COUNT.value,
+                        fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count",
+                        columns=["ID"],
+                        type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,
+                    ),
+                ],
+                batch=BatchSpec(
+                    fully_qualified_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE"
                 ),
-            ],
-            batch=BatchSpec(
-                fully_qualified_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE"
-            ),
-        ),
+            )
+        ],
     )
     print(result)
     assert result == ProfileResponse(
@@ -64,25 +66,27 @@ def test_api_distinct_count_multiple(engine_cls):
             name="snowlake",
             connection_string=SNOWFLAKE_CONNECTION_STRING,
         ),
-        request=ProfileRequest(
-            statistics=[
-                TypedStatistic(
-                    name=ProfileStatisticType.DISTINCT_COUNT.value,
-                    fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count",
-                    columns=["ID"],
-                    type=ProfileStatisticType.DISTINCT_COUNT,
+        requests=[
+            ProfileRequest(
+                statistics=[
+                    TypedStatistic(
+                        name=ProfileStatisticType.COLUMN_DISTINCT_COUNT.value,
+                        fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count",
+                        columns=["ID"],
+                        type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,
+                    ),
+                    TypedStatistic(
+                        name=ProfileStatisticType.COLUMN_DISTINCT_COUNT.value,
+                        fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.distinct_count",
+                        columns=["LABEL"],
+                        type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,
+                    ),
+                ],
+                batch=BatchSpec(
+                    fully_qualified_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE"
                 ),
-                TypedStatistic(
-                    name=ProfileStatisticType.DISTINCT_COUNT.value,
-                    fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.distinct_count",
-                    columns=["LABEL"],
-                    type=ProfileStatisticType.DISTINCT_COUNT,
-                ),
-            ],
-            batch=BatchSpec(
-                fully_qualified_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE"
-            ),
-        ),
+            )
+        ],
     )
     print(result)
     assert result == ProfileResponse(
@@ -106,18 +110,20 @@ def test_api_custom_statistic(engine_cls):
             name="snowlake",
             connection_string=SNOWFLAKE_CONNECTION_STRING,
         ),
-        request=ProfileRequest(
-            statistics=[
-                CustomStatistic(
-                    name="custom_average_str_length",
-                    fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.custom_average_str_length",
-                    sql="CEIL(AVG(LEN(LABEL)))",
+        requests=[
+            ProfileRequest(
+                statistics=[
+                    CustomStatistic(
+                        name="custom_average_str_length",
+                        fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.custom_average_str_length",
+                        sql="CEIL(AVG(LEN(LABEL)))",
+                    ),
+                ],
+                batch=BatchSpec(
+                    fully_qualified_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE"
                 ),
-            ],
-            batch=BatchSpec(
-                fully_qualified_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE"
-            ),
-        ),
+            )
+        ],
     )
     print(result)
 
@@ -157,22 +163,24 @@ def test_api_sample(engine_cls):
             name="snowflake",
             connection_string=SNOWFLAKE_CONNECTION_STRING,
         ),
-        request=ProfileRequest(
-            statistics=[
-                TypedStatistic(
-                    name=ProfileStatisticType.DISTINCT_COUNT.value,
-                    fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count",
-                    columns=["ID"],
-                    type=ProfileStatisticType.DISTINCT_COUNT,
+        requests=[
+            ProfileRequest(
+                statistics=[
+                    TypedStatistic(
+                        name=ProfileStatisticType.COLUMN_DISTINCT_COUNT.value,
+                        fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count",
+                        columns=["ID"],
+                        type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,
+                    ),
+                ],
+                batch=BatchSpec(
+                    fully_qualified_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE",
+                    sample=SampleSpec(
+                        size=100,
+                    ),
                 ),
-            ],
-            batch=BatchSpec(
-                fully_qualified_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE",
-                sample=SampleSpec(
-                    size=100,
-                ),
-            ),
-        ),
+            )
+        ],
     )
     print(result)
 

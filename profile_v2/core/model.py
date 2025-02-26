@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, TypeAlias
 
 
 class ProfileStatisticType(Enum):
-    DISTINCT_COUNT = "distinct_count"
+    COLUMN_DISTINCT_COUNT = "column_distinct_count"
 
 
 StatisticName: TypeAlias = str
