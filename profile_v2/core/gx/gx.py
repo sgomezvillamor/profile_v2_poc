@@ -1,26 +1,21 @@
 import logging
+
 import great_expectations as gx
 
-from profile_v2.core.model import (
-    DataSource,
-    FailureStatisticResult,
-    FailureStatisticResultType,
-    ProfileRequest,
-    ProfileResponse,
-    ProfileStatisticType,
-    SuccessStatisticResult,
-    TypedStatistic,
-)
-from profile_v2.core.api import (
-    ProfileEngine,
-)
+from profile_v2.core.api import ProfileEngine
+from profile_v2.core.model import (DataSource, FailureStatisticResult,
+                                   FailureStatisticResultType, ProfileRequest,
+                                   ProfileResponse, ProfileStatisticType,
+                                   SuccessStatisticResult, TypedStatistic)
 
 logger = logging.getLogger(__name__)
 
 
 class GxProfileEngine(ProfileEngine):
 
-    def do_profile(self, datasource: DataSource, request: ProfileRequest) -> ProfileResponse:
+    def do_profile(
+        self, datasource: DataSource, request: ProfileRequest
+    ) -> ProfileResponse:
         response = ProfileResponse()
         context = gx.get_context()
 
@@ -30,17 +25,27 @@ class GxProfileEngine(ProfileEngine):
         )
         logger.info(f"Data source added: {data_source}")
         table_data_asset = data_source.add_table_asset(
-            table_name=GxProfileEngine._table_name_from_fq_name(request.batch.fully_qualified_dataset_name),
+            table_name=GxProfileEngine._table_name_from_fq_name(
+                request.batch.fully_qualified_dataset_name
+            ),
             name=request.batch.fully_qualified_dataset_name,
         )
         logger.info(f"Table data asset added: {table_data_asset}")
         if request.batch.sample:
             response.data.update(
-                {statistic.fq_name: FailureStatisticResult(type=FailureStatisticResultType.UNSUPPORTED, message="Sampling not supported yet") for statistic in request.statistics}
+                {
+                    statistic.fq_name: FailureStatisticResult(
+                        type=FailureStatisticResultType.UNSUPPORTED,
+                        message="Sampling not supported yet",
+                    )
+                    for statistic in request.statistics
+                }
             )
             return response
 
-        table_batch_definition = table_data_asset.add_batch_definition_whole_table(name="FULL_TABLE")
+        table_batch_definition = table_data_asset.add_batch_definition_whole_table(
+            name="FULL_TABLE"
+        )
 
         suite = gx.ExpectationSuite(name="my_expectation_suite")
 
@@ -48,24 +53,28 @@ class GxProfileEngine(ProfileEngine):
             if isinstance(statistic, TypedStatistic):
                 if statistic.type == ProfileStatisticType.DISTINCT_COUNT:
                     assert len(statistic.columns) == 1
-                    expectation = gx.expectations.ExpectColumnUniqueValueCountToBeBetween(
-                        column=statistic.columns[0],
-                        min_value=None,
-                        max_value=None,
-                        meta={"fq_name": statistic.fq_name} # just some meta to identify the result
+                    expectation = (
+                        gx.expectations.ExpectColumnUniqueValueCountToBeBetween(
+                            column=statistic.columns[0],
+                            min_value=None,
+                            max_value=None,
+                            meta={
+                                "fq_name": statistic.fq_name
+                            },  # just some meta to identify the result
+                        )
                     )
                     suite.add_expectation(expectation)
                 else:
                     logger.warning(f"Unsupported typed statistic spec: {statistic}")
                     response.data[statistic.fq_name] = FailureStatisticResult(
                         type=FailureStatisticResultType.UNSUPPORTED,
-                        message=f"Unsupported typed statistic spec: {statistic}"
+                        message=f"Unsupported typed statistic spec: {statistic}",
                     )
             else:
                 logger.warning(f"Unsupported statistic spec: {statistic}")
                 response.data[statistic.fq_name] = FailureStatisticResult(
                     type=FailureStatisticResultType.UNSUPPORTED,
-                    message=f"Unsupported statistic spec: {statistic}"
+                    message=f"Unsupported statistic spec: {statistic}",
                 )
 
         context.suites.add(suite)
@@ -78,12 +87,18 @@ class GxProfileEngine(ProfileEngine):
         logger.info(f"Validation results: {validation_results}")
 
         for result in validation_results.results:
-            response.data[result.expectation_config.meta['fq_name']] = SuccessStatisticResult(value=result.result['observed_value'])
+            response.data[result.expectation_config.meta["fq_name"]] = (
+                SuccessStatisticResult(value=result.result["observed_value"])
+            )
             # instead, with Metrics API
-            assert result.get_metric(
-                metric_name=result.expectation_config.type + '.result.observed_value',
-                column=result.expectation_config.kwargs['column']
-            ) == result.result["observed_value"]
+            assert (
+                result.get_metric(
+                    metric_name=result.expectation_config.type
+                    + ".result.observed_value",
+                    column=result.expectation_config.kwargs["column"],
+                )
+                == result.result["observed_value"]
+            )
 
         return response
 

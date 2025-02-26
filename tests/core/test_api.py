@@ -1,36 +1,25 @@
 import os
-import pytest
 import urllib.parse
 
-from profile_v2.core.model import (
-    BatchSpec,
-    CustomStatistic,
-    DataSource,
-    FailureStatisticResult,
-    FailureStatisticResultType,
-    ProfileRequest,
-    ProfileResponse,
-    ProfileStatisticType,
-    SampleSpec,
-    SuccessStatisticResult,
-    TypedStatistic,
-)
-from profile_v2.core.gx.gx import (
-    GxProfileEngine,
-)
-from profile_v2.core.sqlalchemy.sqlalchemy import (
-    SqlAlchemyProfileEngine,
-)
+import pytest
 
+from profile_v2.core.gx.gx import GxProfileEngine
+from profile_v2.core.model import (BatchSpec, CustomStatistic, DataSource,
+                                   FailureStatisticResult,
+                                   FailureStatisticResultType, ProfileRequest,
+                                   ProfileResponse, ProfileStatisticType,
+                                   SampleSpec, SuccessStatisticResult,
+                                   TypedStatistic)
+from profile_v2.core.sqlalchemy.sqlalchemy import SqlAlchemyProfileEngine
 
-SNOWFLAKE_USER=urllib.parse.quote(os.environ["SNOWFLAKE_USER"])
-SNOWFLAKE_PASSWORD=urllib.parse.quote(os.environ["SNOWFLAKE_PASSWORD"])
-SNOWFLAKE_ACCOUNT="cfa31444"
-SNOWFLAKE_DATABASE="SMOKE_TEST_DB"
-SNOWFLAKE_SCHEMA="PUBLIC"
-SNOWFLAKE_WAREHOUSE="SMOKE_TEST"
-SNOWFLAKE_ROLE="datahub_role"
-SNOWFLAKE_CONNECTION_STRING=f"snowflake://{SNOWFLAKE_USER}:{SNOWFLAKE_PASSWORD}@{SNOWFLAKE_ACCOUNT}/{SNOWFLAKE_DATABASE}/{SNOWFLAKE_SCHEMA}?warehouse={SNOWFLAKE_WAREHOUSE}&role={SNOWFLAKE_ROLE}&application=datahub"
+SNOWFLAKE_USER = urllib.parse.quote(os.environ["SNOWFLAKE_USER"])
+SNOWFLAKE_PASSWORD = urllib.parse.quote(os.environ["SNOWFLAKE_PASSWORD"])
+SNOWFLAKE_ACCOUNT = "cfa31444"
+SNOWFLAKE_DATABASE = "SMOKE_TEST_DB"
+SNOWFLAKE_SCHEMA = "PUBLIC"
+SNOWFLAKE_WAREHOUSE = "SMOKE_TEST"
+SNOWFLAKE_ROLE = "datahub_role"
+SNOWFLAKE_CONNECTION_STRING = f"snowflake://{SNOWFLAKE_USER}:{SNOWFLAKE_PASSWORD}@{SNOWFLAKE_ACCOUNT}/{SNOWFLAKE_DATABASE}/{SNOWFLAKE_SCHEMA}?warehouse={SNOWFLAKE_WAREHOUSE}&role={SNOWFLAKE_ROLE}&application=datahub"
 
 
 @pytest.mark.parametrize("engine_cls", [GxProfileEngine, SqlAlchemyProfileEngine])
@@ -53,15 +42,18 @@ def test_api_distinct_count(engine_cls):
             ],
             batch=BatchSpec(
                 fully_qualified_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE"
-            )
+            ),
         ),
     )
     print(result)
     assert result == ProfileResponse(
         data={
-            'SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count': SuccessStatisticResult(value=398880),
+            "SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count": SuccessStatisticResult(
+                value=398880
+            ),
         },
     )
+
 
 @pytest.mark.parametrize("engine_cls", [GxProfileEngine, SqlAlchemyProfileEngine])
 def test_api_distinct_count_multiple(engine_cls):
@@ -89,16 +81,21 @@ def test_api_distinct_count_multiple(engine_cls):
             ],
             batch=BatchSpec(
                 fully_qualified_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE"
-            )
+            ),
         ),
     )
     print(result)
     assert result == ProfileResponse(
         data={
-            'SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count': SuccessStatisticResult(value=398880),
-            'SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.distinct_count': SuccessStatisticResult(value=5),
+            "SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count": SuccessStatisticResult(
+                value=398880
+            ),
+            "SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.distinct_count": SuccessStatisticResult(
+                value=5
+            ),
         },
     )
+
 
 @pytest.mark.parametrize("engine_cls", [GxProfileEngine, SqlAlchemyProfileEngine])
 def test_api_custom_statistic(engine_cls):
@@ -119,7 +116,7 @@ def test_api_custom_statistic(engine_cls):
             ],
             batch=BatchSpec(
                 fully_qualified_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE"
-            )
+            ),
         ),
     )
     print(result)
@@ -127,16 +124,29 @@ def test_api_custom_statistic(engine_cls):
     assert len(result.data) == 1
 
     if engine_cls == GxProfileEngine:
-        assert isinstance(result.data['SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.custom_average_str_length'], FailureStatisticResult)
-        assert result.data['SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.custom_average_str_length'].type == FailureStatisticResultType.UNSUPPORTED
+        assert isinstance(
+            result.data[
+                "SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.custom_average_str_length"
+            ],
+            FailureStatisticResult,
+        )
+        assert (
+            result.data[
+                "SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.custom_average_str_length"
+            ].type
+            == FailureStatisticResultType.UNSUPPORTED
+        )
     elif engine_cls == SqlAlchemyProfileEngine:
         assert result == ProfileResponse(
             data={
-                'SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.custom_average_str_length': SuccessStatisticResult(value=7),
+                "SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.custom_average_str_length": SuccessStatisticResult(
+                    value=7
+                ),
             },
         )
     else:
         assert False, "Unknown engine"
+
 
 @pytest.mark.parametrize("engine_cls", [GxProfileEngine, SqlAlchemyProfileEngine])
 def test_api_sample(engine_cls):
@@ -160,8 +170,8 @@ def test_api_sample(engine_cls):
                 fully_qualified_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE",
                 sample=SampleSpec(
                     size=100,
-                )
-            )
+                ),
+            ),
         ),
     )
     print(result)
@@ -169,12 +179,24 @@ def test_api_sample(engine_cls):
     assert len(result.data) == 1
 
     if engine_cls == GxProfileEngine:
-        assert isinstance(result.data['SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count'], FailureStatisticResult)
-        assert result.data['SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count'].type == FailureStatisticResultType.UNSUPPORTED
+        assert isinstance(
+            result.data[
+                "SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count"
+            ],
+            FailureStatisticResult,
+        )
+        assert (
+            result.data[
+                "SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count"
+            ].type
+            == FailureStatisticResultType.UNSUPPORTED
+        )
     elif engine_cls == SqlAlchemyProfileEngine:
         assert result == ProfileResponse(
             data={
-                'SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count': SuccessStatisticResult(value=100),
+                "SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count": SuccessStatisticResult(
+                    value=100
+                ),
             },
         )
     else:

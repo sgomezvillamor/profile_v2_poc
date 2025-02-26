@@ -1,28 +1,22 @@
 import logging
 from typing import List
-from sqlalchemy import (
-    create_engine,
-    text,
-)
-from profile_v2.core.model import (
-    CustomStatistic,
-    DataSource,
-    ProfileRequest,
-    ProfileResponse,
-    ProfileStatisticType,
-    StatisticSpec,
-    SuccessStatisticResult,
-    TypedStatistic,
-)
-from profile_v2.core.api import (
-    ProfileEngine,
-)
+
+from sqlalchemy import create_engine, text
+
+from profile_v2.core.api import ProfileEngine
+from profile_v2.core.model import (CustomStatistic, DataSource, ProfileRequest,
+                                   ProfileResponse, ProfileStatisticType,
+                                   StatisticSpec, SuccessStatisticResult,
+                                   TypedStatistic)
 
 logger = logging.getLogger(__name__)
 
+
 class SqlAlchemyProfileEngine(ProfileEngine):
 
-    def do_profile(self, datasource: DataSource, request: ProfileRequest) -> ProfileResponse:
+    def do_profile(
+        self, datasource: DataSource, request: ProfileRequest
+    ) -> ProfileResponse:
         response = ProfileResponse()
         engine = create_engine(datasource.connection_string)
 
@@ -51,14 +45,20 @@ class SqlAlchemyProfileEngine(ProfileEngine):
                 logger.info(row)
                 if row:
                     for column, value in zip(row._fields, row._data):
-                        column = column.strip('`')
-                        fq_name = SqlAlchemyProfileEngine._find_fq_name_to_preserve_casing(request.statistics, column)
+                        column = column.strip("`")
+                        fq_name = (
+                            SqlAlchemyProfileEngine._find_fq_name_to_preserve_casing(
+                                request.statistics, column
+                            )
+                        )
                         response.data[fq_name] = SuccessStatisticResult(value=value)
 
         return response
 
     @staticmethod
-    def _find_fq_name_to_preserve_casing(statistic_specs: List[StatisticSpec], column_name: str) -> str:
+    def _find_fq_name_to_preserve_casing(
+        statistic_specs: List[StatisticSpec], column_name: str
+    ) -> str:
         # snowflake or sqlalchemy uppercase column names when fetching results
         for statistic_spec in statistic_specs:
             if statistic_spec.fq_name.casefold() == column_name.casefold():

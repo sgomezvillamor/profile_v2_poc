@@ -9,3 +9,5 @@ snowflake-sqlalchemy
 # development
 mypy
 pytest
+black
+isort
