@@ -15,6 +15,12 @@ logger = logging.getLogger(__name__)
 
 
 class SqlAlchemyProfileEngine(ProfileEngine):
+    """
+    Generic profile engine using SQLAlchemy.
+
+    Restrictions:
+    - all requests must be for the same batch
+    """
 
     def do_profile(
         self, datasource: DataSource, requests: List[ProfileRequest]

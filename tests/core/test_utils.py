@@ -13,7 +13,7 @@ from profile_v2.core.utils import (ModelCollections,
 
 class TestModelCollections(unittest.TestCase):
 
-    def test_split_requests_by_statistics_and_grouped_results(self):
+    def test_group_requests_by_statistics_and_grouped_results(self):
         requests = [
             ProfileRequest(
                 statistics=[
@@ -31,7 +31,7 @@ class TestModelCollections(unittest.TestCase):
             ),
         ]
         predicate = lambda stat: stat.name == "stat_a"
-        splits = ModelCollections.split_request_by_statistics(
+        splits = ModelCollections.group_request_by_statistics_predicate(
             requests, predicate, group_results=True
         )
         print(splits)
@@ -57,7 +57,7 @@ class TestModelCollections(unittest.TestCase):
             ],
         }
 
-    def test_split_requests_by_statistics_and_non_grouped_results(self):
+    def test_group_requests_by_statistics_and_non_grouped_results(self):
         requests = [
             ProfileRequest(
                 statistics=[
@@ -75,7 +75,7 @@ class TestModelCollections(unittest.TestCase):
             ),
         ]
         predicate = lambda stat: stat.name == "stat_a"
-        splits = ModelCollections.split_request_by_statistics(
+        splits = ModelCollections.group_request_by_statistics_predicate(
             requests, predicate, group_results=False
         )
         print(splits)
@@ -104,7 +104,7 @@ class TestModelCollections(unittest.TestCase):
             ],
         }
 
-    def test_group_requests_by_batch_with_same_batch(self):
+    def test_join_statistics_by_batch_with_same_batch(self):
         requests = [
             ProfileRequest(
                 statistics=[StatisticSpec(name="stat1", fq_name="fq_name_stat1")],
@@ -115,7 +115,7 @@ class TestModelCollections(unittest.TestCase):
                 batch=BatchSpec(fq_dataset_name="batch1"),
             ),
         ]
-        grouped = ModelCollections.group_requests_by_batch(requests)
+        grouped = ModelCollections.join_statistics_by_batch(requests)
         print(grouped)
         assert grouped == [
             ProfileRequest(
@@ -127,7 +127,7 @@ class TestModelCollections(unittest.TestCase):
             ),
         ]
 
-    def test_group_requests_by_batch_with_different_batch(self):
+    def test_join_statistics_by_batch_with_different_batch(self):
         requests = [
             ProfileRequest(
                 statistics=[StatisticSpec(name="stat1", fq_name="fq_name_stat1")],
@@ -138,7 +138,7 @@ class TestModelCollections(unittest.TestCase):
                 batch=BatchSpec(fq_dataset_name="batch2"),
             ),
         ]
-        grouped = ModelCollections.group_requests_by_batch(requests)
+        grouped = ModelCollections.join_statistics_by_batch(requests)
         print(grouped)
         assert grouped == [
             ProfileRequest(
@@ -153,7 +153,7 @@ class TestModelCollections(unittest.TestCase):
             ),
         ]
 
-    def test_split_requests_by_batch(self):
+    def test_group_requests_by_batch(self):
         requests = [
             ProfileRequest(
                 statistics=[StatisticSpec(name="stat1", fq_name="fq_name_stat1")],
@@ -169,7 +169,9 @@ class TestModelCollections(unittest.TestCase):
             ),
         ]
         predicate = lambda batch: batch.fq_dataset_name[-1]
-        grouped = ModelCollections.split_requests_by_batch(requests, predicate)
+        grouped = ModelCollections.group_requests_by_batch_predicate(
+            requests, predicate
+        )
         print(grouped)
         assert grouped == {
             "A": [
@@ -243,7 +245,7 @@ class FixedResponseEngine(ProfileEngine):
         return self.response
 
 
-class TestEngineWithFallbacks(unittest.TestCase):
+class TestSequentialFallbackProfileEngine(unittest.TestCase):
 
     def test_with_single_successful_engine(self):
         requests = [

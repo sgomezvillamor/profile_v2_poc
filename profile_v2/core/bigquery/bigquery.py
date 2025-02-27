@@ -42,7 +42,7 @@ class BigQueryInformationSchemaProfileEngine(ProfileEngine):
     ) -> ProfileResponse:
         response = ProfileResponse()
 
-        split = ModelCollections.split_request_by_statistics(
+        split = ModelCollections.group_request_by_statistics_predicate(
             requests, BigQueryInformationSchemaProfileEngine._is_statistic_supported
         )
         supported_requests = split[True]
@@ -55,9 +55,11 @@ class BigQueryInformationSchemaProfileEngine(ProfileEngine):
                     message=f"Unsupported statistic spec: {statistic}",
                 )
 
-        supported_requests_by_dataset = ModelCollections.split_requests_by_batch(
-            supported_requests,
-            predicate=BigQueryUtils.bigquerydataset_from_batch_spec,
+        supported_requests_by_dataset = (
+            ModelCollections.group_requests_by_batch_predicate(
+                supported_requests,
+                predicate=BigQueryUtils.bigquerydataset_from_batch_spec,
+            )
         )
 
         assert datasource.extra_config and datasource.extra_config.get(

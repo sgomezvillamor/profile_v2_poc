@@ -17,11 +17,18 @@ PredicateResponse = TypeVar("PredicateResponse")
 class ModelCollections:
 
     @staticmethod
-    def split_request_by_statistics(
+    def group_request_by_statistics_predicate(
         requests: List[ProfileRequest],
         predicate: Callable[[StatisticSpec], PredicateResponse],
         group_results: bool = True,
     ) -> Dict[PredicateResponse, List[ProfileRequest]]:
+        """
+        Groups requests by the result of the predicate applied to the statistic spec.
+        :param requests:
+        :param predicate:
+        :param group_results:
+        :return:
+        """
         requests_by_predicate: Dict[PredicateResponse, List[ProfileRequest]] = (
             defaultdict(list)
         )
@@ -34,14 +41,21 @@ class ModelCollections:
 
         if group_results:
             for key, value in requests_by_predicate.items():
-                requests_by_predicate[key] = ModelCollections.group_requests_by_batch(
+                requests_by_predicate[key] = ModelCollections.join_statistics_by_batch(
                     value
                 )
 
         return requests_by_predicate
 
     @staticmethod
-    def group_requests_by_batch(requests: List[ProfileRequest]) -> List[ProfileRequest]:
+    def join_statistics_by_batch(
+        requests: List[ProfileRequest],
+    ) -> List[ProfileRequest]:
+        """
+        Joins statistics across input requests if they share the same batch.
+        :param requests:
+        :return:
+        """
         grouped_requests: List[ProfileRequest] = []
         for request in requests:
             found = False
@@ -55,10 +69,16 @@ class ModelCollections:
         return grouped_requests
 
     @staticmethod
-    def split_requests_by_batch(
+    def group_requests_by_batch_predicate(
         requests: List[ProfileRequest],
         predicate: Callable[[BatchSpec], PredicateResponse],
     ) -> Dict[PredicateResponse, List[ProfileRequest]]:
+        """
+        Groups requests by the result of the predicate applied to the batch spec.
+        :param requests:
+        :param predicate:
+        :return:
+        """
         requests_by_predicate: Dict[PredicateResponse, List[ProfileRequest]] = (
             defaultdict(list)
         )
@@ -71,6 +91,11 @@ class ModelCollections:
     def split_response_by_type(
         response: ProfileResponse,
     ) -> Dict[Type[StatisticResult], ProfileResponse]:
+        """
+        Splits the response by the type of the statistic result.
+        :param response:
+        :return:
+        """
         responses_by_type: Dict[Type[StatisticResult], ProfileResponse] = defaultdict(
             ProfileResponse
         )

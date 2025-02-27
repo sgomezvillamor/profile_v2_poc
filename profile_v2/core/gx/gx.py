@@ -13,6 +13,17 @@ logger = logging.getLogger(__name__)
 
 
 class GxProfileEngine(ProfileEngine):
+    """
+    Generic profile engine using Great Expectations.
+
+    Restrictions:
+    - all requests must be for the same batch
+
+    TODO:
+    - sampling
+    - other statistics different from COLUMN_DISTINCT_COUNT
+    - custom statistics
+    """
 
     def do_profile(
         self, datasource: DataSource, requests: List[ProfileRequest]
