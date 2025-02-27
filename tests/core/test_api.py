@@ -28,7 +28,7 @@ def test_api_distinct_count(engine_cls):
 
     result = profile_engine.do_profile(
         datasource=DataSource(
-            name="snowlake",
+            name="snowflake",
             connection_string=SNOWFLAKE_CONNECTION_STRING,
         ),
         requests=[
@@ -63,7 +63,7 @@ def test_api_distinct_count_multiple(engine_cls):
 
     result = profile_engine.do_profile(
         datasource=DataSource(
-            name="snowlake",
+            name="snowflake",
             connection_string=SNOWFLAKE_CONNECTION_STRING,
         ),
         requests=[
@@ -107,7 +107,7 @@ def test_api_custom_statistic(engine_cls):
 
     result = profile_engine.do_profile(
         datasource=DataSource(
-            name="snowlake",
+            name="snowflake",
             connection_string=SNOWFLAKE_CONNECTION_STRING,
         ),
         requests=[

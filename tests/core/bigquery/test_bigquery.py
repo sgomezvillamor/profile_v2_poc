@@ -269,8 +269,7 @@ class TestBigQueryProfileEngine(unittest.TestCase):
                 statistics=[
                     TypedStatistic(
                         name="row_count",
-                        # fq_name="acryl-staging.customer_demo.PurchaseEvent.row_count",
-                        fq_name="fq_name_01",
+                        fq_name="acryl-staging.customer_demo.PurchaseEvent.row_count",
                         columns=[],  # Not used
                         type=ProfileStatisticType.TABLE_ROW_COUNT,
                     ),
@@ -283,8 +282,7 @@ class TestBigQueryProfileEngine(unittest.TestCase):
                 statistics=[
                     TypedStatistic(
                         name="row_count",
-                        # fq_name="acryl-staging.customer_demo.revenue.row_count",
-                        fq_name="fq_name_02",
+                        fq_name="acryl-staging.customer_demo.revenue.row_count",
                         columns=[],  # Not used
                         type=ProfileStatisticType.TABLE_ROW_COUNT,
                     ),
@@ -297,8 +295,7 @@ class TestBigQueryProfileEngine(unittest.TestCase):
                 statistics=[
                     TypedStatistic(
                         name="row_count",
-                        # fq_name="acryl-staging.deploy_test_1k.table_1.row_count",
-                        fq_name="fq_name_03",
+                        fq_name="acryl-staging.deploy_test_1k.table_1.row_count",
                         columns=[],  # Not used
                         type=ProfileStatisticType.TABLE_ROW_COUNT,
                     ),
@@ -311,8 +308,7 @@ class TestBigQueryProfileEngine(unittest.TestCase):
                 statistics=[
                     TypedStatistic(
                         name="row_count",
-                        # fq_name="acryl-staging.deploy_test_1k.table_10.row_count",
-                        fq_name="fq_name_04",
+                        fq_name="acryl-staging.deploy_test_1k.table_10.row_count",
                         columns=[],  # Not used
                         type=ProfileStatisticType.TABLE_ROW_COUNT,
                     ),
@@ -325,8 +321,7 @@ class TestBigQueryProfileEngine(unittest.TestCase):
                 statistics=[
                     TypedStatistic(
                         name="distinct_count",
-                        # fq_name="acryl-staging.deploy_test_1k.PurchaseEvent.product_id.distinct_count",
-                        fq_name="fq_name_05",
+                        fq_name="acryl-staging.deploy_test_1k.PurchaseEvent.product_id.distinct_count",
                         columns=["product_id"],
                         type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,
                     ),
@@ -339,8 +334,7 @@ class TestBigQueryProfileEngine(unittest.TestCase):
                 statistics=[
                     TypedStatistic(
                         name="distinct_count",
-                        # fq_name="acryl-staging.deploy_test_1k.PurchaseEvent.user_id.distinct_count",
-                        fq_name="fq_name_06",
+                        fq_name="acryl-staging.deploy_test_1k.PurchaseEvent.user_id.distinct_count",
                         columns=["user_id"],
                         type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,
                     ),
@@ -353,8 +347,7 @@ class TestBigQueryProfileEngine(unittest.TestCase):
                 statistics=[
                     CustomStatistic(
                         name="distinct_count",
-                        # fq_name="acryl-staging.deploy_test_1k.PurchaseEvent.amount.custom_avg",
-                        fq_name="fq_name_07",
+                        fq_name="acryl-staging.deploy_test_1k.PurchaseEvent.amount.custom_avg",
                         sql="CEIL(AVG(amount))",
                     ),
                 ],
@@ -366,8 +359,7 @@ class TestBigQueryProfileEngine(unittest.TestCase):
                 statistics=[
                     TypedStatistic(
                         name="distinct_count",
-                        # fq_name="acryl-staging.deploy_test_1k.deploy_test_1k.table_1.distinct_count",
-                        fq_name="fq_name_08",
+                        fq_name="acryl-staging.deploy_test_1k.deploy_test_1k.table_1.distinct_count",
                         columns=["column_0"],
                         type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,
                     ),
@@ -382,13 +374,29 @@ class TestBigQueryProfileEngine(unittest.TestCase):
         print(response)
         assert response == ProfileResponse(
             data={
-                "fq_name_01": SuccessStatisticResult(value=68),
-                "fq_name_02": SuccessStatisticResult(value=1),
-                "fq_name_03": SuccessStatisticResult(value=0),
-                "fq_name_04": SuccessStatisticResult(value=0),
-                "fq_name_05": SuccessStatisticResult(value=4),
-                "fq_name_06": SuccessStatisticResult(value=2),
-                "fq_name_07": SuccessStatisticResult(value=20.0),
-                "fq_name_08": SuccessStatisticResult(value=0),
+                "acryl-staging.customer_demo.PurchaseEvent.row_count": SuccessStatisticResult(
+                    value=68
+                ),
+                "acryl-staging.customer_demo.revenue.row_count": SuccessStatisticResult(
+                    value=1
+                ),
+                "acryl-staging.deploy_test_1k.table_1.row_count": SuccessStatisticResult(
+                    value=0
+                ),
+                "acryl-staging.deploy_test_1k.table_10.row_count": SuccessStatisticResult(
+                    value=0
+                ),
+                "acryl-staging.deploy_test_1k.PurchaseEvent.product_id.distinct_count": SuccessStatisticResult(
+                    value=4
+                ),
+                "acryl-staging.deploy_test_1k.PurchaseEvent.user_id.distinct_count": SuccessStatisticResult(
+                    value=2
+                ),
+                "acryl-staging.deploy_test_1k.PurchaseEvent.amount.custom_avg": SuccessStatisticResult(
+                    value=20.0
+                ),
+                "acryl-staging.deploy_test_1k.deploy_test_1k.table_1.distinct_count": SuccessStatisticResult(
+                    value=0
+                ),
             },
         )

@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import Dict, List
 
 from sqlalchemy import create_engine, text
 
@@ -34,6 +34,8 @@ class SqlAlchemyProfileEngine(ProfileEngine):
                 datasource.connection_string,
                 credentials_path=datasource.extra_config["credentials_path"],
             )
+        else:
+            assert False, f"Unsupported datasource: {datasource.name}"
 
     def do_profile(
         self, datasource: DataSource, requests: List[ProfileRequest]
@@ -41,17 +43,27 @@ class SqlAlchemyProfileEngine(ProfileEngine):
         response = ProfileResponse()
 
         engine = SqlAlchemyProfileEngine.create_engine(datasource)
-
+        fq_name_mappings: Dict[str, str] = {}
         for request in requests:
             select_columns = []
             for statistic in request.statistics:
                 fq_name = statistic.fq_name
+                sqlfriendly_fq_name = SqlAlchemyProfileEngine._sqlfriendly_column_name(
+                    fq_name
+                )
+                fq_name_mappings[sqlfriendly_fq_name] = fq_name
                 if isinstance(statistic, TypedStatistic):
                     if statistic.type == ProfileStatisticType.COLUMN_DISTINCT_COUNT:
-                        column = f"COUNT(DISTINCT {','.join([col for col in statistic.columns])}) AS `{fq_name}`"
+                        column = f"COUNT(DISTINCT {','.join([col for col in statistic.columns])}) AS {sqlfriendly_fq_name}"
                         select_columns.append(column)
+                    else:
+                        logger.warning(f"Unsupported statistic type: {statistic.type}")
+                        response.data[fq_name] = FailureStatisticResult(
+                            type=FailureStatisticResultType.UNSUPPORTED,
+                            message=f"Unsupported statistic type: {statistic.type}",
+                        )
                 elif isinstance(statistic, CustomStatistic):
-                    column = f"{statistic.sql} AS `{fq_name}`"
+                    column = f"{statistic.sql} AS {sqlfriendly_fq_name}"
                     select_columns.append(column)
                 else:
                     logger.warning(f"Unsupported statistic spec: {statistic}")
@@ -73,19 +85,12 @@ class SqlAlchemyProfileEngine(ProfileEngine):
                     if row:
                         for column, value in zip(row._fields, row._data):
                             column = column.strip("`")
-                            fq_name = SqlAlchemyProfileEngine._find_fq_name_to_preserve_casing(
-                                request.statistics, column
-                            )
+                            fq_name = fq_name_mappings[column]
                             response.data[fq_name] = SuccessStatisticResult(value=value)
 
         return response
 
     @staticmethod
-    def _find_fq_name_to_preserve_casing(
-        statistic_specs: List[StatisticSpec], column_name: str
-    ) -> str:
-        # snowflake or sqlalchemy uppercase column names when fetching results
-        for statistic_spec in statistic_specs:
-            if statistic_spec.fq_name.casefold() == column_name.casefold():
-                return statistic_spec.fq_name
-        return column_name
+    def _sqlfriendly_column_name(column_name: str) -> str:
+        # lower because eg snowflake returns column names in uppercase when fetching results
+        return column_name.replace(".", "_").replace(" ", "_").replace("-", "_").lower()
