@@ -1,7 +1,7 @@
 import logging
-from typing import List
+from typing import Dict, List, Tuple
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 
 from profile_v2.core.api import ProfileEngine
 from profile_v2.core.model import (BatchSpec, DataSource,
@@ -10,7 +10,8 @@ from profile_v2.core.model import (BatchSpec, DataSource,
                                    ProfileResponse, ProfileStatisticType,
                                    StatisticSpec, SuccessStatisticResult,
                                    TypedStatistic)
-from profile_v2.core.utils import ModelCollections
+from profile_v2.core.sqlalchemy.sqlalchemy import SqlAlchemyProfileEngine
+from profile_v2.core.utils import ModelCollections, ParallelProfileEngine
 
 logger = logging.getLogger(__name__)
 
@@ -62,13 +63,7 @@ class BigQueryInformationSchemaProfileEngine(ProfileEngine):
             )
         )
 
-        assert datasource.extra_config and datasource.extra_config.get(
-            "credentials_path"
-        ), "credentials_path is required for BigQuery"
-        engine = create_engine(
-            datasource.connection_string,
-            credentials_path=datasource.extra_config["credentials_path"],
-        )
+        engine = SqlAlchemyProfileEngine.create_engine(datasource)
 
         for dataset, requests in supported_requests_by_dataset.items():
             select_query = f"select table_id, row_count from {dataset}.__TABLES__"
@@ -99,3 +94,83 @@ class BigQueryInformationSchemaProfileEngine(ProfileEngine):
         return isinstance(statistic_spec, TypedStatistic) and statistic_spec.type in [
             ProfileStatisticType.TABLE_ROW_COUNT,
         ]
+
+
+class BigQueryProfileEngine(ProfileEngine):
+    """
+    Profile engine for BigQuery.
+
+    Table level statistics are solved with the BigQueryInformationSchemaProfileEngine.
+    While all other statistics are solved with the SqlAlchemyProfileEngine, and running requests in parallel with
+    ParallelProfileEngine.
+    """
+
+    @staticmethod
+    def _separate_information_schema_requests(
+        requests: List[ProfileRequest],
+    ) -> Tuple[List[ProfileRequest], List[ProfileRequest]]:
+        information_schema_requests: List[ProfileRequest] = []
+        other_requests: List[ProfileRequest] = []
+
+        for request in requests:
+            for statistic in request.statistics:
+                if BigQueryInformationSchemaProfileEngine._is_statistic_supported(
+                    statistic
+                ):
+                    information_schema_requests.append(
+                        ProfileRequest(batch=request.batch, statistics=[statistic])
+                    )
+                else:
+                    other_requests.append(
+                        ProfileRequest(batch=request.batch, statistics=[statistic])
+                    )
+
+        information_schema_requests = ModelCollections.join_statistics_by_batch(
+            information_schema_requests
+        )
+        other_requests = ModelCollections.join_statistics_by_batch(other_requests)
+        return information_schema_requests, other_requests
+
+    @staticmethod
+    def _group_requests_by_bigquerydataset(
+        requests: List[ProfileRequest],
+    ) -> List[List[ProfileRequest]]:
+        requests_by_dataset: Dict[str, List[ProfileRequest]] = (
+            ModelCollections.group_requests_by_batch_predicate(
+                requests,
+                predicate=BigQueryUtils.bigquerydataset_from_batch_spec,
+            )
+        )
+        return [requests for requests in requests_by_dataset.values()]
+
+    def __init__(self, max_workers: int = 4):
+        self.bq_information_schema_profile_engine = (
+            BigQueryInformationSchemaProfileEngine()
+        )
+        self.parallel_sqlalchemy_profile_engine = ParallelProfileEngine(
+            engine=SqlAlchemyProfileEngine(),
+            max_workers=max_workers,
+            batch_requests_predicate=BigQueryProfileEngine._group_requests_by_bigquerydataset,
+        )
+
+    def do_profile(
+        self, datasource: DataSource, requests: List[ProfileRequest]
+    ) -> ProfileResponse:
+        response = ProfileResponse()
+
+        information_schema_requests, other_requests = (
+            BigQueryProfileEngine._separate_information_schema_requests(requests)
+        )
+        information_schema_response = (
+            self.bq_information_schema_profile_engine.do_profile(
+                datasource, information_schema_requests
+            )
+        )
+        other_requests_response = self.parallel_sqlalchemy_profile_engine.do_profile(
+            datasource, other_requests
+        )
+
+        response.data.update(information_schema_response.data)
+        response.data.update(other_requests_response.data)
+
+        return response

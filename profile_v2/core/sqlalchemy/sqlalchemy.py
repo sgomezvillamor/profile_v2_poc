@@ -22,11 +22,25 @@ class SqlAlchemyProfileEngine(ProfileEngine):
     - TABLE_ROW_COUNT statistic
     """
 
+    @staticmethod
+    def create_engine(datasource: DataSource):
+        if datasource.name == "snowflake":
+            return create_engine(datasource.connection_string)
+        elif datasource.name == "bigquery":
+            assert datasource.extra_config and datasource.extra_config.get(
+                "credentials_path"
+            ), "credentials_path is required for BigQuery"
+            return create_engine(
+                datasource.connection_string,
+                credentials_path=datasource.extra_config["credentials_path"],
+            )
+
     def do_profile(
         self, datasource: DataSource, requests: List[ProfileRequest]
     ) -> ProfileResponse:
         response = ProfileResponse()
-        engine = create_engine(datasource.connection_string)
+
+        engine = SqlAlchemyProfileEngine.create_engine(datasource)
 
         for request in requests:
             select_columns = []

@@ -1,8 +1,8 @@
 import unittest
-from unittest.mock import MagicMock, patch
 
 from profile_v2.core.bigquery.bigquery import (
-    BigQueryInformationSchemaProfileEngine, BigQueryUtils)
+    BigQueryInformationSchemaProfileEngine, BigQueryProfileEngine,
+    BigQueryUtils)
 from profile_v2.core.model import (BatchSpec, CustomStatistic, DataSource,
                                    FailureStatisticResult,
                                    FailureStatisticResultType, ProfileRequest,
@@ -250,5 +250,145 @@ class TestBigQueryInformationSchemaProfileEngine(unittest.TestCase):
                 "acryl-staging.deploy_test_1k.table_10.row_count": SuccessStatisticResult(
                     value=0
                 ),
+            },
+        )
+
+
+class TestBigQueryProfileEngine(unittest.TestCase):
+
+    def test_integration_test(self):
+        datasource = DataSource(
+            name="bigquery",
+            connection_string=BIGQUERY_CONNECTION_STRING,
+            extra_config={
+                "credentials_path": BIGQUERY_CREDENTIALS_PATH,
+            },
+        )
+        requests = [
+            ProfileRequest(
+                statistics=[
+                    TypedStatistic(
+                        name="row_count",
+                        # fq_name="acryl-staging.customer_demo.PurchaseEvent.row_count",
+                        fq_name="fq_name_01",
+                        columns=[],  # Not used
+                        type=ProfileStatisticType.TABLE_ROW_COUNT,
+                    ),
+                ],
+                batch=BatchSpec(
+                    fq_dataset_name=f"{BIGQUERY_PROJECT}.{BIGQUERY_DATASET_CUSTOMER_DEMO}.PurchaseEvent",
+                ),
+            ),
+            ProfileRequest(
+                statistics=[
+                    TypedStatistic(
+                        name="row_count",
+                        # fq_name="acryl-staging.customer_demo.revenue.row_count",
+                        fq_name="fq_name_02",
+                        columns=[],  # Not used
+                        type=ProfileStatisticType.TABLE_ROW_COUNT,
+                    ),
+                ],
+                batch=BatchSpec(
+                    fq_dataset_name=f"{BIGQUERY_PROJECT}.{BIGQUERY_DATASET_CUSTOMER_DEMO}.revenue",
+                ),
+            ),
+            ProfileRequest(
+                statistics=[
+                    TypedStatistic(
+                        name="row_count",
+                        # fq_name="acryl-staging.deploy_test_1k.table_1.row_count",
+                        fq_name="fq_name_03",
+                        columns=[],  # Not used
+                        type=ProfileStatisticType.TABLE_ROW_COUNT,
+                    ),
+                ],
+                batch=BatchSpec(
+                    fq_dataset_name=f"{BIGQUERY_PROJECT}.{BIGQUERY_DATASET_DEPLOY_TEST_1K}.table_1",
+                ),
+            ),
+            ProfileRequest(
+                statistics=[
+                    TypedStatistic(
+                        name="row_count",
+                        # fq_name="acryl-staging.deploy_test_1k.table_10.row_count",
+                        fq_name="fq_name_04",
+                        columns=[],  # Not used
+                        type=ProfileStatisticType.TABLE_ROW_COUNT,
+                    ),
+                ],
+                batch=BatchSpec(
+                    fq_dataset_name=f"{BIGQUERY_PROJECT}.{BIGQUERY_DATASET_DEPLOY_TEST_1K}.table_10",
+                ),
+            ),
+            ProfileRequest(
+                statistics=[
+                    TypedStatistic(
+                        name="distinct_count",
+                        # fq_name="acryl-staging.deploy_test_1k.PurchaseEvent.product_id.distinct_count",
+                        fq_name="fq_name_05",
+                        columns=["product_id"],
+                        type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,
+                    ),
+                ],
+                batch=BatchSpec(
+                    fq_dataset_name=f"{BIGQUERY_PROJECT}.{BIGQUERY_DATASET_CUSTOMER_DEMO}.PurchaseEvent",
+                ),
+            ),
+            ProfileRequest(
+                statistics=[
+                    TypedStatistic(
+                        name="distinct_count",
+                        # fq_name="acryl-staging.deploy_test_1k.PurchaseEvent.user_id.distinct_count",
+                        fq_name="fq_name_06",
+                        columns=["user_id"],
+                        type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,
+                    ),
+                ],
+                batch=BatchSpec(
+                    fq_dataset_name=f"{BIGQUERY_PROJECT}.{BIGQUERY_DATASET_CUSTOMER_DEMO}.PurchaseEvent",
+                ),
+            ),
+            ProfileRequest(
+                statistics=[
+                    CustomStatistic(
+                        name="distinct_count",
+                        # fq_name="acryl-staging.deploy_test_1k.PurchaseEvent.amount.custom_avg",
+                        fq_name="fq_name_07",
+                        sql="CEIL(AVG(amount))",
+                    ),
+                ],
+                batch=BatchSpec(
+                    fq_dataset_name=f"{BIGQUERY_PROJECT}.{BIGQUERY_DATASET_CUSTOMER_DEMO}.PurchaseEvent",
+                ),
+            ),
+            ProfileRequest(
+                statistics=[
+                    TypedStatistic(
+                        name="distinct_count",
+                        # fq_name="acryl-staging.deploy_test_1k.deploy_test_1k.table_1.distinct_count",
+                        fq_name="fq_name_08",
+                        columns=["column_0"],
+                        type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,
+                    ),
+                ],
+                batch=BatchSpec(
+                    fq_dataset_name=f"{BIGQUERY_PROJECT}.{BIGQUERY_DATASET_DEPLOY_TEST_1K}.table_1",
+                ),
+            ),
+        ]
+        engine = BigQueryProfileEngine()
+        response = engine.do_profile(datasource, requests)
+        print(response)
+        assert response == ProfileResponse(
+            data={
+                "fq_name_01": SuccessStatisticResult(value=68),
+                "fq_name_02": SuccessStatisticResult(value=1),
+                "fq_name_03": SuccessStatisticResult(value=0),
+                "fq_name_04": SuccessStatisticResult(value=0),
+                "fq_name_05": SuccessStatisticResult(value=4),
+                "fq_name_06": SuccessStatisticResult(value=2),
+                "fq_name_07": SuccessStatisticResult(value=20.0),
+                "fq_name_08": SuccessStatisticResult(value=0),
             },
         )
