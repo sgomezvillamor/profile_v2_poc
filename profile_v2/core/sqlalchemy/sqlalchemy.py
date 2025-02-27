@@ -18,8 +18,8 @@ class SqlAlchemyProfileEngine(ProfileEngine):
     """
     Generic profile engine using SQLAlchemy.
 
-    Restrictions:
-    - all requests must be for the same batch
+    TODO:
+    - TABLE_ROW_COUNT statistic
     """
 
     def do_profile(

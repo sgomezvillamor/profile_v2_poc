@@ -209,3 +209,60 @@ def test_api_sample(engine_cls):
         )
     else:
         assert False, "Unknown engine"
+
+
+@pytest.mark.parametrize("engine_cls", [GxProfileEngine, SqlAlchemyProfileEngine])
+def test_api_different_datasets(engine_cls):
+    profile_engine = engine_cls()
+
+    result = profile_engine.do_profile(
+        datasource=DataSource(
+            name="snowflake",
+            connection_string=SNOWFLAKE_CONNECTION_STRING,
+        ),
+        requests=[
+            ProfileRequest(
+                statistics=[
+                    TypedStatistic(
+                        name=ProfileStatisticType.COLUMN_DISTINCT_COUNT.value,
+                        fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count",
+                        columns=["ID"],
+                        type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,
+                    ),
+                ],
+                batch=BatchSpec(
+                    fq_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE",
+                ),
+            ),
+            ProfileRequest(
+                statistics=[
+                    TypedStatistic(
+                        name=ProfileStatisticType.COLUMN_DISTINCT_COUNT.value,
+                        fq_name="SMOKE_TEST_DB.PUBLIC.TABLE_FROM_S3_STAGE.FILENAME.distinct_count",
+                        columns=["FILENAME"],
+                        type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,
+                    ),
+                ],
+                batch=BatchSpec(
+                    fq_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.TABLE_FROM_S3_STAGE",
+                ),
+            ),
+        ],
+    )
+    print(result)
+
+    assert len(result.data) == 2
+
+    if engine_cls in [GxProfileEngine, SqlAlchemyProfileEngine]:
+        assert result == ProfileResponse(
+            data={
+                "SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count": SuccessStatisticResult(
+                    value=398880
+                ),
+                "SMOKE_TEST_DB.PUBLIC.TABLE_FROM_S3_STAGE.FILENAME.distinct_count": SuccessStatisticResult(
+                    value=1
+                ),
+            },
+        )
+    else:
+        assert False, "Unknown engine"

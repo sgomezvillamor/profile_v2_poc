@@ -1,4 +1,5 @@
 import logging
+import random
 from typing import List
 
 import great_expectations as gx
@@ -61,7 +62,9 @@ class GxProfileEngine(ProfileEngine):
                 name="FULL_TABLE"
             )
 
-            suite = gx.ExpectationSuite(name="my_expectation_suite")
+            suite = gx.ExpectationSuite(
+                name=GxProfileEngine._random_suite_name(),
+            )
 
             for statistic in request.statistics:
                 if isinstance(statistic, TypedStatistic):
@@ -96,7 +99,7 @@ class GxProfileEngine(ProfileEngine):
             validation_definition = gx.ValidationDefinition(
                 data=table_batch_definition,
                 suite=suite,
-                name="my_validation_definition",
+                name=GxProfileEngine._random_validation_definition_name(),
             )
 
             validation_results = validation_definition.run()
@@ -121,3 +124,11 @@ class GxProfileEngine(ProfileEngine):
     @staticmethod
     def _table_name_from_fq_name(fq_name: str) -> str:
         return fq_name.split(".")[-1]
+
+    @staticmethod
+    def _random_suite_name() -> str:
+        return f"suite_{random.randint(100, 999)}"
+
+    @staticmethod
+    def _random_validation_definition_name() -> str:
+        return f"validation_definition_{random.randint(100, 999)}"

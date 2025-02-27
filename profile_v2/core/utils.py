@@ -1,3 +1,4 @@
+import concurrent.futures
 import logging
 from collections import defaultdict
 from copy import deepcopy
@@ -162,5 +163,53 @@ class SequentialFallbackProfileEngine(ProfileEngine):
                 logger.info(f"Pending requests: {pending}")
             else:
                 break
+
+        return response
+
+
+class ParallelProfileEngine(ProfileEngine):
+    """
+    Executes requests in parallel with a given engine.
+
+    The requests are grouped in batches using the given predicate.
+    """
+
+    def __init__(
+        self,
+        engine: ProfileEngine,
+        max_workers: int = 4,
+        batch_requests_predicate: Optional[
+            Callable[[List[ProfileRequest]], List[List[ProfileRequest]]]
+        ] = None,
+    ):
+        self.engine = engine
+        self.max_workers = max_workers
+        self.group_requests_predicate = batch_requests_predicate
+
+    def do_profile(
+        self, datasource: DataSource, requests: List[ProfileRequest]
+    ) -> ProfileResponse:
+        response = ProfileResponse()
+
+        batch_requests = (
+            self.group_requests_predicate(requests)
+            if self.group_requests_predicate
+            else [requests]
+        )
+        logger.info(f"Requests batched in {len(batch_requests)} batches")
+        logger.debug(batch_requests)
+
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=self.max_workers
+        ) as executor:
+            batch_response_futures = {
+                executor.submit(self.engine.do_profile, datasource, batch): batch
+                for batch in batch_requests
+            }
+            for batch_response_future in concurrent.futures.as_completed(
+                batch_response_futures
+            ):
+                batch_response = batch_response_future.result()
+                response.data.update(batch_response.data)
 
         return response
