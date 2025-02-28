@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from sqlalchemy import create_engine, text
 
@@ -43,52 +43,77 @@ class SqlAlchemyProfileEngine(ProfileEngine):
         response = ProfileResponse()
 
         engine = SqlAlchemyProfileEngine.create_engine(datasource)
-        fq_name_mappings: Dict[str, str] = {}
         for request in requests:
-            select_columns = []
-            for statistic in request.statistics:
-                fq_name = statistic.fq_name
-                sqlfriendly_fq_name = SqlAlchemyProfileEngine._sqlfriendly_column_name(
-                    fq_name
-                )
-                fq_name_mappings[sqlfriendly_fq_name] = fq_name
-                if isinstance(statistic, TypedStatistic):
-                    if statistic.type == ProfileStatisticType.COLUMN_DISTINCT_COUNT:
-                        column = f"COUNT(DISTINCT {','.join([col for col in statistic.columns])}) AS {sqlfriendly_fq_name}"
-                        select_columns.append(column)
-                    else:
-                        logger.warning(f"Unsupported statistic type: {statistic.type}")
-                        response.data[fq_name] = UnsuccessfulStatisticResult(
-                            type=UnsuccessfulStatisticResultType.UNSUPPORTED,
-                            message=f"Unsupported statistic type: {statistic.type}",
-                        )
-                elif isinstance(statistic, CustomStatistic):
-                    column = f"{statistic.sql} AS {sqlfriendly_fq_name}"
-                    select_columns.append(column)
-                else:
-                    logger.warning(f"Unsupported statistic spec: {statistic}")
-                    response.data[fq_name] = UnsuccessfulStatisticResult(
-                        type=UnsuccessfulStatisticResultType.UNSUPPORTED,
-                        message=f"Unsupported statistic spec: {statistic}",
-                    )
-
-            if select_columns:
-                from_statement = f"FROM {request.batch.fq_dataset_name}"
-                if request.batch.sample:
-                    from_statement += f" TABLESAMPLE ({request.batch.sample.size} ROWS)"
-                select_query = f"SELECT {', '.join(select_columns)} {from_statement}"
-                logger.info(text(select_query))
-                with engine.connect() as conn:
-                    result = conn.execute(text(select_query))
-                    row = result.fetchone()
-                    logger.info(row)
-                    if row:
-                        for column, value in zip(row._fields, row._data):
-                            column = column.strip("`")
-                            fq_name = fq_name_mappings[column]
-                            response.data[fq_name] = SuccessStatisticResult(value=value)
+            select_query, fq_name_mappings = self._generate_select_query(
+                request, response
+            )
+            if select_query:
+                for column, value in self._execute_select(engine, select_query):
+                    fq_name = fq_name_mappings[column]
+                    response.data[fq_name] = SuccessStatisticResult(value=value)
 
         return response
+
+    def _generate_select_query(
+        self, request: ProfileRequest, response: ProfileResponse
+    ) -> Tuple[Optional[str], Dict[str, str]]:
+        """
+        Generate a SELECT query based on the profile request.
+
+        If the request contains multiple statistics, the query will be a single SELECT statement.
+        If some statistic is not supported, the corresponding UnsuccessfulStatisticResult will be added to the response.
+
+        If no SELECT query is needed (e.g. all unsupported), None is returned.
+        """
+        fq_name_mappings: Dict[str, str] = {}
+        select_columns = []
+        for statistic in request.statistics:
+            fq_name = statistic.fq_name
+            sqlfriendly_fq_name = SqlAlchemyProfileEngine._sqlfriendly_column_name(
+                fq_name
+            )
+            fq_name_mappings[sqlfriendly_fq_name] = fq_name
+
+            if isinstance(statistic, TypedStatistic):
+                if statistic.type == ProfileStatisticType.COLUMN_DISTINCT_COUNT:
+                    column = f"COUNT(DISTINCT {','.join([col for col in statistic.columns])}) AS {sqlfriendly_fq_name}"
+                    select_columns.append(column)
+                else:
+                    logger.warning(f"Unsupported statistic type: {statistic.type}")
+                    response.data[fq_name] = UnsuccessfulStatisticResult(
+                        type=UnsuccessfulStatisticResultType.UNSUPPORTED,
+                        message=f"Unsupported statistic type: {statistic.type}",
+                    )
+            elif isinstance(statistic, CustomStatistic):
+                column = f"{statistic.sql} AS {sqlfriendly_fq_name}"
+                select_columns.append(column)
+            else:
+                logger.warning(f"Unsupported statistic spec: {statistic}")
+                response.data[fq_name] = UnsuccessfulStatisticResult(
+                    type=UnsuccessfulStatisticResultType.UNSUPPORTED,
+                    message=f"Unsupported statistic spec: {statistic}",
+                )
+
+        if select_columns:
+            from_statement = f"FROM {request.batch.fq_dataset_name}"
+            if request.batch.sample:
+                from_statement += f" TABLESAMPLE ({request.batch.sample.size} ROWS)"
+
+            select_query = f"SELECT {', '.join(select_columns)} {from_statement}"
+            return select_query, fq_name_mappings
+
+        return None, fq_name_mappings
+
+    def _execute_select(self, engine, select_query) -> Iterable[Tuple[str, Any]]:
+        logger.info(text(select_query))
+        with engine.connect() as conn:
+            result = conn.execute(text(select_query))
+            row = result.fetchone()
+            logger.info(row)
+            if row:
+                for column, value in zip(row._fields, row._data):
+                    column = column.strip("`")
+                    yield column, value
 
     @staticmethod
     def _sqlfriendly_column_name(column_name: str) -> str:
