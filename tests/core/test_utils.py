@@ -7,11 +7,11 @@ from pytest import approx
 
 from profile_v2.core.api_utils import (ModelCollections, ParallelProfileEngine,
                                        SequentialFallbackProfileEngine)
-from profile_v2.core.model import (BatchSpec, DataSource,
-                                   FailureStatisticResult,
-                                   FailureStatisticResultType, ProfileRequest,
-                                   ProfileResponse, StatisticSpec,
-                                   SuccessStatisticResult)
+from profile_v2.core.model import (BatchSpec, DataSource, DataSourceType,
+                                   ProfileRequest, ProfileResponse,
+                                   StatisticSpec, SuccessStatisticResult,
+                                   UnsuccessfulStatisticResult,
+                                   UnsuccessfulStatisticResultType)
 from tests.core.common import FixedResponseEngine, SuccessResponseEngine
 
 logger = logging.getLogger(__name__)
@@ -24,15 +24,15 @@ class TestModelCollections(unittest.TestCase):
         requests = [
             ProfileRequest(
                 statistics=[
-                    StatisticSpec(name="stat1", fq_name="fq_name_stat1"),
-                    StatisticSpec(name="stat2", fq_name="fq_name_stat2"),
+                    StatisticSpec(fq_name="fq_name_stat1"),
+                    StatisticSpec(fq_name="fq_name_stat2"),
                 ],
                 batch=BatchSpec(fq_dataset_name="batch1"),
             ),
             ProfileRequest(
                 statistics=[
-                    StatisticSpec(name="stat3", fq_name="fq_name_stat3"),
-                    StatisticSpec(name="stat4", fq_name="fq_name_stat4"),
+                    StatisticSpec(fq_name="fq_name_stat3"),
+                    StatisticSpec(fq_name="fq_name_stat4"),
                 ],
                 batch=BatchSpec(fq_dataset_name="batch2"),
             ),
@@ -43,8 +43,8 @@ class TestModelCollections(unittest.TestCase):
         requests.append(
             ProfileRequest(
                 statistics=[
-                    StatisticSpec(name="stat5", fq_name="fq_name_stat1"),
-                    StatisticSpec(name="stat6", fq_name="fq_name_stat6"),
+                    StatisticSpec(fq_name="fq_name_stat1"),
+                    StatisticSpec(fq_name="fq_name_stat6"),
                 ],
                 batch=BatchSpec(fq_dataset_name="batch3"),
             )
@@ -55,20 +55,20 @@ class TestModelCollections(unittest.TestCase):
         requests = [
             ProfileRequest(
                 statistics=[
-                    StatisticSpec(name="stat_a", fq_name="fq_name_stat1"),
-                    StatisticSpec(name="stat_a", fq_name="fq_name_stat2"),
+                    StatisticSpec(fq_name="fq_name_stat1_A"),
+                    StatisticSpec(fq_name="fq_name_stat2_A"),
                 ],
                 batch=BatchSpec(fq_dataset_name="batch1"),
             ),
             ProfileRequest(
                 statistics=[
-                    StatisticSpec(name="stat_a", fq_name="fq_name_stat3"),
-                    StatisticSpec(name="stat_b", fq_name="fq_name_stat4"),
+                    StatisticSpec(fq_name="fq_name_stat3_A"),
+                    StatisticSpec(fq_name="fq_name_stat4_B"),
                 ],
                 batch=BatchSpec(fq_dataset_name="batch2"),
             ),
         ]
-        predicate = lambda stat: stat.name == "stat_a"
+        predicate = lambda stat: stat.fq_name.endswith("_A")
         splits = ModelCollections.group_request_by_statistics_predicate(
             requests, predicate, group_results=True
         )
@@ -77,19 +77,19 @@ class TestModelCollections(unittest.TestCase):
             True: [
                 ProfileRequest(
                     statistics=[
-                        StatisticSpec(name="stat_a", fq_name="fq_name_stat1"),
-                        StatisticSpec(name="stat_a", fq_name="fq_name_stat2"),
+                        StatisticSpec(fq_name="fq_name_stat1_A"),
+                        StatisticSpec(fq_name="fq_name_stat2_A"),
                     ],
                     batch=BatchSpec(fq_dataset_name="batch1"),
                 ),
                 ProfileRequest(
-                    statistics=[StatisticSpec(name="stat_a", fq_name="fq_name_stat3")],
+                    statistics=[StatisticSpec(fq_name="fq_name_stat3_A")],
                     batch=BatchSpec(fq_dataset_name="batch2"),
                 ),
             ],
             False: [
                 ProfileRequest(
-                    statistics=[StatisticSpec(name="stat_b", fq_name="fq_name_stat4")],
+                    statistics=[StatisticSpec(fq_name="fq_name_stat4_B")],
                     batch=BatchSpec(fq_dataset_name="batch2"),
                 ),
             ],
@@ -99,20 +99,20 @@ class TestModelCollections(unittest.TestCase):
         requests = [
             ProfileRequest(
                 statistics=[
-                    StatisticSpec(name="stat_a", fq_name="fq_name_stat1"),
-                    StatisticSpec(name="stat_a", fq_name="fq_name_stat2"),
+                    StatisticSpec(fq_name="fq_name_stat1_A"),
+                    StatisticSpec(fq_name="fq_name_stat2_A"),
                 ],
                 batch=BatchSpec(fq_dataset_name="batch1"),
             ),
             ProfileRequest(
                 statistics=[
-                    StatisticSpec(name="stat_a", fq_name="fq_name_stat3"),
-                    StatisticSpec(name="stat_b", fq_name="fq_name_stat4"),
+                    StatisticSpec(fq_name="fq_name_stat3_A"),
+                    StatisticSpec(fq_name="fq_name_stat4_B"),
                 ],
                 batch=BatchSpec(fq_dataset_name="batch2"),
             ),
         ]
-        predicate = lambda stat: stat.name == "stat_a"
+        predicate = lambda stat: stat.fq_name == "stat_a"
         splits = ModelCollections.group_request_by_statistics_predicate(
             requests, predicate, group_results=False
         )
@@ -121,22 +121,22 @@ class TestModelCollections(unittest.TestCase):
             True: [
                 ProfileRequest(
                     statistics=[
-                        StatisticSpec(name="stat_a", fq_name="fq_name_stat1"),
+                        StatisticSpec(fq_name="fq_name_stat1_A"),
                     ],
                     batch=BatchSpec(fq_dataset_name="batch1"),
                 ),
                 ProfileRequest(
-                    statistics=[StatisticSpec(name="stat_a", fq_name="fq_name_stat2")],
+                    statistics=[StatisticSpec(fq_name="fq_name_stat2_A")],
                     batch=BatchSpec(fq_dataset_name="batch1"),
                 ),
                 ProfileRequest(
-                    statistics=[StatisticSpec(name="stat_a", fq_name="fq_name_stat3")],
+                    statistics=[StatisticSpec(fq_name="fq_name_stat3_A")],
                     batch=BatchSpec(fq_dataset_name="batch2"),
                 ),
             ],
             False: [
                 ProfileRequest(
-                    statistics=[StatisticSpec(name="stat_b", fq_name="fq_name_stat4")],
+                    statistics=[StatisticSpec(fq_name="fq_name_stat4_B")],
                     batch=BatchSpec(fq_dataset_name="batch2"),
                 ),
             ],
@@ -145,11 +145,11 @@ class TestModelCollections(unittest.TestCase):
     def test_join_statistics_by_batch_with_same_batch(self):
         requests = [
             ProfileRequest(
-                statistics=[StatisticSpec(name="stat1", fq_name="fq_name_stat1")],
+                statistics=[StatisticSpec(fq_name="fq_name_stat1")],
                 batch=BatchSpec(fq_dataset_name="batch1"),
             ),
             ProfileRequest(
-                statistics=[StatisticSpec(name="stat2", fq_name="fq_name_stat2")],
+                statistics=[StatisticSpec(fq_name="fq_name_stat2")],
                 batch=BatchSpec(fq_dataset_name="batch1"),
             ),
         ]
@@ -158,8 +158,8 @@ class TestModelCollections(unittest.TestCase):
         assert grouped == [
             ProfileRequest(
                 statistics=[
-                    StatisticSpec(name="stat1", fq_name="fq_name_stat1"),
-                    StatisticSpec(name="stat2", fq_name="fq_name_stat2"),
+                    StatisticSpec(fq_name="fq_name_stat1"),
+                    StatisticSpec(fq_name="fq_name_stat2"),
                 ],
                 batch=BatchSpec(fq_dataset_name="batch1"),
             ),
@@ -168,11 +168,11 @@ class TestModelCollections(unittest.TestCase):
     def test_join_statistics_by_batch_with_different_batch(self):
         requests = [
             ProfileRequest(
-                statistics=[StatisticSpec(name="stat1", fq_name="fq_name_stat1")],
+                statistics=[StatisticSpec(fq_name="fq_name_stat1")],
                 batch=BatchSpec(fq_dataset_name="batch1"),
             ),
             ProfileRequest(
-                statistics=[StatisticSpec(name="stat2", fq_name="fq_name_stat2")],
+                statistics=[StatisticSpec(fq_name="fq_name_stat2")],
                 batch=BatchSpec(fq_dataset_name="batch2"),
             ),
         ]
@@ -181,12 +181,12 @@ class TestModelCollections(unittest.TestCase):
         assert grouped == [
             ProfileRequest(
                 statistics=[
-                    StatisticSpec(name="stat1", fq_name="fq_name_stat1"),
+                    StatisticSpec(fq_name="fq_name_stat1"),
                 ],
                 batch=BatchSpec(fq_dataset_name="batch1"),
             ),
             ProfileRequest(
-                statistics=[StatisticSpec(name="stat2", fq_name="fq_name_stat2")],
+                statistics=[StatisticSpec(fq_name="fq_name_stat2")],
                 batch=BatchSpec(fq_dataset_name="batch2"),
             ),
         ]
@@ -194,15 +194,15 @@ class TestModelCollections(unittest.TestCase):
     def test_group_requests_by_batch(self):
         requests = [
             ProfileRequest(
-                statistics=[StatisticSpec(name="stat1", fq_name="fq_name_stat1")],
+                statistics=[StatisticSpec(fq_name="fq_name_stat1")],
                 batch=BatchSpec(fq_dataset_name="batch_A"),
             ),
             ProfileRequest(
-                statistics=[StatisticSpec(name="stat2", fq_name="fq_name_stat2")],
+                statistics=[StatisticSpec(fq_name="fq_name_stat2")],
                 batch=BatchSpec(fq_dataset_name="batch_B"),
             ),
             ProfileRequest(
-                statistics=[StatisticSpec(name="stat3", fq_name="fq_name_stat3")],
+                statistics=[StatisticSpec(fq_name="fq_name_stat3")],
                 batch=BatchSpec(fq_dataset_name="batch_A"),
             ),
         ]
@@ -214,17 +214,17 @@ class TestModelCollections(unittest.TestCase):
         assert grouped == {
             "A": [
                 ProfileRequest(
-                    statistics=[StatisticSpec(name="stat1", fq_name="fq_name_stat1")],
+                    statistics=[StatisticSpec(fq_name="fq_name_stat1")],
                     batch=BatchSpec(fq_dataset_name="batch_A"),
                 ),
                 ProfileRequest(
-                    statistics=[StatisticSpec(name="stat3", fq_name="fq_name_stat3")],
+                    statistics=[StatisticSpec(fq_name="fq_name_stat3")],
                     batch=BatchSpec(fq_dataset_name="batch_A"),
                 ),
             ],
             "B": [
                 ProfileRequest(
-                    statistics=[StatisticSpec(name="stat2", fq_name="fq_name_stat2")],
+                    statistics=[StatisticSpec(fq_name="fq_name_stat2")],
                     batch=BatchSpec(fq_dataset_name="batch_B"),
                 ),
             ],
@@ -235,15 +235,15 @@ class TestModelCollections(unittest.TestCase):
             data={
                 "fq_name_stat1": SuccessStatisticResult(value=1),
                 "fq_name_stat2": SuccessStatisticResult(value=2),
-                "fq_name_stat3": FailureStatisticResult(
-                    type=FailureStatisticResultType.FAILURE
+                "fq_name_stat3": UnsuccessfulStatisticResult(
+                    type=UnsuccessfulStatisticResultType.FAILURE
                 ),
                 "fq_name_stat4": SuccessStatisticResult(value=3),
-                "fq_name_stat5": FailureStatisticResult(
-                    type=FailureStatisticResultType.UNSUPPORTED
+                "fq_name_stat5": UnsuccessfulStatisticResult(
+                    type=UnsuccessfulStatisticResultType.UNSUPPORTED
                 ),
-                "fq_name_stat6": FailureStatisticResult(
-                    type=FailureStatisticResultType.UNSUPPORTED
+                "fq_name_stat6": UnsuccessfulStatisticResult(
+                    type=UnsuccessfulStatisticResultType.UNSUPPORTED
                 ),
             }
         )
@@ -257,16 +257,16 @@ class TestModelCollections(unittest.TestCase):
                     "fq_name_stat4": SuccessStatisticResult(value=3),
                 },
             ),
-            FailureStatisticResult: ProfileResponse(
+            UnsuccessfulStatisticResult: ProfileResponse(
                 data={
-                    "fq_name_stat3": FailureStatisticResult(
-                        type=FailureStatisticResultType.FAILURE
+                    "fq_name_stat3": UnsuccessfulStatisticResult(
+                        type=UnsuccessfulStatisticResultType.FAILURE
                     ),
-                    "fq_name_stat5": FailureStatisticResult(
-                        type=FailureStatisticResultType.UNSUPPORTED
+                    "fq_name_stat5": UnsuccessfulStatisticResult(
+                        type=UnsuccessfulStatisticResultType.UNSUPPORTED
                     ),
-                    "fq_name_stat6": FailureStatisticResult(
-                        type=FailureStatisticResultType.UNSUPPORTED
+                    "fq_name_stat6": UnsuccessfulStatisticResult(
+                        type=UnsuccessfulStatisticResultType.UNSUPPORTED
                     ),
                 },
             ),
@@ -275,23 +275,24 @@ class TestModelCollections(unittest.TestCase):
 
 class TestSequentialFallbackProfileEngine(unittest.TestCase):
 
+    _datasource = DataSource(
+        source=DataSourceType.SNOWFLAKE, connection_string="connection_string1"
+    )
+
     def test_with_single_successful_engine(self):
         requests = [
             ProfileRequest(
-                statistics=[StatisticSpec(name="stat1", fq_name="fq_stat1")],
+                statistics=[StatisticSpec(fq_name="fq_stat1")],
                 batch=BatchSpec(fq_dataset_name="batch1"),
             )
         ]
-        datasource = DataSource(
-            name="datasource1", connection_string="connection_string1"
-        )
         success_response = ProfileResponse(
             data={"fq_stat1": SuccessStatisticResult(value=1)}
         )
         engine = FixedResponseEngine(success_response)
         fallback_engine = SequentialFallbackProfileEngine([engine])
 
-        response = fallback_engine.profile(datasource, requests)
+        response = fallback_engine.profile(self._datasource, requests)
         print(response)
 
         assert response == ProfileResponse(
@@ -302,32 +303,29 @@ class TestSequentialFallbackProfileEngine(unittest.TestCase):
         requests = [
             ProfileRequest(
                 statistics=[
-                    StatisticSpec(name="stat_a", fq_name="fq_stat_1a"),
-                    StatisticSpec(name="stat_b", fq_name="fq_stat_1b"),
-                    StatisticSpec(name="stat_c", fq_name="fq_stat_1c"),
+                    StatisticSpec(fq_name="fq_stat_1a"),
+                    StatisticSpec(fq_name="fq_stat_1b"),
+                    StatisticSpec(fq_name="fq_stat_1c"),
                 ],
                 batch=BatchSpec(fq_dataset_name="batch1"),
             ),
             ProfileRequest(
                 statistics=[
-                    StatisticSpec(name="stat_a", fq_name="fq_stat_2a"),
-                    StatisticSpec(name="stat_b", fq_name="fq_stat_2b"),
-                    StatisticSpec(name="stat_c", fq_name="fq_stat_2c"),
+                    StatisticSpec(fq_name="fq_stat_2a"),
+                    StatisticSpec(fq_name="fq_stat_2b"),
+                    StatisticSpec(fq_name="fq_stat_2c"),
                 ],
                 batch=BatchSpec(fq_dataset_name="batch2"),
             ),
             ProfileRequest(
                 statistics=[
-                    StatisticSpec(name="stat_a", fq_name="fq_stat_3a"),
-                    StatisticSpec(name="stat_b", fq_name="fq_stat_3b"),
-                    StatisticSpec(name="stat_c", fq_name="fq_stat_3c"),
+                    StatisticSpec(fq_name="fq_stat_3a"),
+                    StatisticSpec(fq_name="fq_stat_3b"),
+                    StatisticSpec(fq_name="fq_stat_3c"),
                 ],
                 batch=BatchSpec(fq_dataset_name="batch3"),
             ),
         ]
-        datasource = DataSource(
-            name="datasource1", connection_string="connection_string1"
-        )
         engine1 = FixedResponseEngine(
             ProfileResponse(
                 data={
@@ -335,18 +333,18 @@ class TestSequentialFallbackProfileEngine(unittest.TestCase):
                     "fq_stat_1b": SuccessStatisticResult(value=1),
                     "fq_stat_1c": SuccessStatisticResult(value=1),
                     "fq_stat_2a": SuccessStatisticResult(value=1),
-                    "fq_stat_2b": FailureStatisticResult(
-                        type=FailureStatisticResultType.UNSUPPORTED
+                    "fq_stat_2b": UnsuccessfulStatisticResult(
+                        type=UnsuccessfulStatisticResultType.UNSUPPORTED
                     ),
-                    "fq_stat_2c": FailureStatisticResult(
-                        type=FailureStatisticResultType.UNSUPPORTED
+                    "fq_stat_2c": UnsuccessfulStatisticResult(
+                        type=UnsuccessfulStatisticResultType.UNSUPPORTED
                     ),
                     "fq_stat_3a": SuccessStatisticResult(value=1),
-                    "fq_stat_3b": FailureStatisticResult(
-                        type=FailureStatisticResultType.FAILURE
+                    "fq_stat_3b": UnsuccessfulStatisticResult(
+                        type=UnsuccessfulStatisticResultType.FAILURE
                     ),
-                    "fq_stat_3c": FailureStatisticResult(
-                        type=FailureStatisticResultType.FAILURE
+                    "fq_stat_3c": UnsuccessfulStatisticResult(
+                        type=UnsuccessfulStatisticResultType.FAILURE
                     ),
                 }
             )
@@ -355,11 +353,11 @@ class TestSequentialFallbackProfileEngine(unittest.TestCase):
             ProfileResponse(
                 data={
                     "fq_stat_2b": SuccessStatisticResult(value=2),
-                    "fq_stat_2c": FailureStatisticResult(
-                        type=FailureStatisticResultType.FAILURE
+                    "fq_stat_2c": UnsuccessfulStatisticResult(
+                        type=UnsuccessfulStatisticResultType.FAILURE
                     ),
-                    "fq_stat_3b": FailureStatisticResult(
-                        type=FailureStatisticResultType.FAILURE
+                    "fq_stat_3b": UnsuccessfulStatisticResult(
+                        type=UnsuccessfulStatisticResultType.FAILURE
                     ),
                     "fq_stat_3c": SuccessStatisticResult(value=3),
                 }
@@ -375,7 +373,7 @@ class TestSequentialFallbackProfileEngine(unittest.TestCase):
         )
         fallback_engine = SequentialFallbackProfileEngine([engine1, engine2, engine3])
 
-        response = fallback_engine.profile(datasource, requests)
+        response = fallback_engine.profile(self._datasource, requests)
         print(response)
         assert response == ProfileResponse(
             data={
@@ -395,24 +393,21 @@ class TestSequentialFallbackProfileEngine(unittest.TestCase):
         requests = [
             ProfileRequest(
                 statistics=[
-                    StatisticSpec(name="stat_a", fq_name="fq_stat_1a"),
-                    StatisticSpec(name="stat_b", fq_name="fq_stat_1b"),
-                    StatisticSpec(name="stat_c", fq_name="fq_stat_1c"),
+                    StatisticSpec(fq_name="fq_stat_1a"),
+                    StatisticSpec(fq_name="fq_stat_1b"),
+                    StatisticSpec(fq_name="fq_stat_1c"),
                 ],
                 batch=BatchSpec(fq_dataset_name="batch1"),
             ),
             ProfileRequest(
                 statistics=[
-                    StatisticSpec(name="stat_a", fq_name="fq_stat_2a"),
-                    StatisticSpec(name="stat_b", fq_name="fq_stat_2b"),
-                    StatisticSpec(name="stat_c", fq_name="fq_stat_2c"),
+                    StatisticSpec(fq_name="fq_stat_2a"),
+                    StatisticSpec(fq_name="fq_stat_2b"),
+                    StatisticSpec(fq_name="fq_stat_2c"),
                 ],
                 batch=BatchSpec(fq_dataset_name="batch2"),
             ),
         ]
-        datasource = DataSource(
-            name="datasource1", connection_string="connection_string1"
-        )
         engine1 = FixedResponseEngine(
             ProfileResponse(
                 data={
@@ -420,11 +415,11 @@ class TestSequentialFallbackProfileEngine(unittest.TestCase):
                     "fq_stat_1b": SuccessStatisticResult(value=1),
                     "fq_stat_1c": SuccessStatisticResult(value=1),
                     "fq_stat_2a": SuccessStatisticResult(value=1),
-                    "fq_stat_2b": FailureStatisticResult(
-                        type=FailureStatisticResultType.UNSUPPORTED
+                    "fq_stat_2b": UnsuccessfulStatisticResult(
+                        type=UnsuccessfulStatisticResultType.UNSUPPORTED
                     ),
-                    "fq_stat_2c": FailureStatisticResult(
-                        type=FailureStatisticResultType.UNSUPPORTED
+                    "fq_stat_2c": UnsuccessfulStatisticResult(
+                        type=UnsuccessfulStatisticResultType.UNSUPPORTED
                     ),
                 }
             )
@@ -432,18 +427,18 @@ class TestSequentialFallbackProfileEngine(unittest.TestCase):
         engine2 = FixedResponseEngine(
             ProfileResponse(
                 data={
-                    "fq_stat_2b": FailureStatisticResult(
-                        type=FailureStatisticResultType.UNSUPPORTED
+                    "fq_stat_2b": UnsuccessfulStatisticResult(
+                        type=UnsuccessfulStatisticResultType.UNSUPPORTED
                     ),
-                    "fq_stat_2c": FailureStatisticResult(
-                        type=FailureStatisticResultType.FAILURE
+                    "fq_stat_2c": UnsuccessfulStatisticResult(
+                        type=UnsuccessfulStatisticResultType.FAILURE
                     ),
                 }
             )
         )
         fallback_engine = SequentialFallbackProfileEngine([engine1, engine2])
 
-        response = fallback_engine.profile(datasource, requests)
+        response = fallback_engine.profile(self._datasource, requests)
         print(response)
         assert response == ProfileResponse(
             data={
@@ -451,43 +446,45 @@ class TestSequentialFallbackProfileEngine(unittest.TestCase):
                 "fq_stat_1b": SuccessStatisticResult(value=1),
                 "fq_stat_1c": SuccessStatisticResult(value=1),
                 "fq_stat_2a": SuccessStatisticResult(value=1),
-                "fq_stat_2b": FailureStatisticResult(
-                    type=FailureStatisticResultType.UNSUPPORTED
+                "fq_stat_2b": UnsuccessfulStatisticResult(
+                    type=UnsuccessfulStatisticResultType.UNSUPPORTED
                 ),
-                "fq_stat_2c": FailureStatisticResult(
-                    type=FailureStatisticResultType.FAILURE
+                "fq_stat_2c": UnsuccessfulStatisticResult(
+                    type=UnsuccessfulStatisticResultType.FAILURE
                 ),
             }
         )
 
 
 class TestParallelProfileEngine(unittest.TestCase):
-    requests = [
+    _requests = [
         ProfileRequest(
             statistics=[
-                StatisticSpec(name="stat1", fq_name="fq_stat1_1"),
-                StatisticSpec(name="stat2", fq_name="fq_stat2_1"),
+                StatisticSpec(fq_name="fq_stat1_1"),
+                StatisticSpec(fq_name="fq_stat2_1"),
             ],
             batch=BatchSpec(fq_dataset_name="batch1"),
         ),
         ProfileRequest(
             statistics=[
-                StatisticSpec(name="stat1", fq_name="fq_stat1_2"),
-                StatisticSpec(name="stat2", fq_name="fq_stat2_2"),
+                StatisticSpec(fq_name="fq_stat1_2"),
+                StatisticSpec(fq_name="fq_stat2_2"),
             ],
             batch=BatchSpec(fq_dataset_name="batch2"),
         ),
         ProfileRequest(
             statistics=[
-                StatisticSpec(name="stat1", fq_name="fq_stat1_3"),
-                StatisticSpec(name="stat2", fq_name="fq_stat2_3"),
+                StatisticSpec(fq_name="fq_stat1_3"),
+                StatisticSpec(fq_name="fq_stat2_3"),
             ],
             batch=BatchSpec(fq_dataset_name="batch3"),
         ),
     ]
-    datasource = DataSource(name="datasource1", connection_string="connection_string1")
+    _datasource = DataSource(
+        source=DataSourceType.SNOWFLAKE, connection_string="connection_string1"
+    )
 
-    expected_response = ProfileResponse(
+    _expected_response = ProfileResponse(
         data={
             "fq_stat1_1": SuccessStatisticResult(value=1),
             "fq_stat2_1": SuccessStatisticResult(value=1),
@@ -522,11 +519,11 @@ class TestParallelProfileEngine(unittest.TestCase):
         )
 
         start_time = time.time()
-        response = parallel_engine.profile(self.datasource, self.requests)
+        response = parallel_engine.profile(self._datasource, self._requests)
         end_time = time.time()
         elapsed_time = end_time - start_time
 
-        assert response == self.expected_response
+        assert response == self._expected_response
         # all requests in parallel, so elapsed time should be around 1 second = time of the slowest request
         assert elapsed_time == approx(1, abs=0.1)
 
@@ -538,10 +535,10 @@ class TestParallelProfileEngine(unittest.TestCase):
         )
 
         start_time = time.time()
-        response = parallel_engine.profile(self.datasource, self.requests)
+        response = parallel_engine.profile(self._datasource, self._requests)
         end_time = time.time()
         elapsed_time = end_time - start_time
 
-        assert response == self.expected_response
+        assert response == self._expected_response
         # all 6 statistics in individual batches, so elapsed time should be statistics=6/workers=2 = 3 seconds
         assert elapsed_time == approx(3, abs=0.1)

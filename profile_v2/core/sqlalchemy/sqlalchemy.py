@@ -4,11 +4,12 @@ from typing import Dict, List
 from sqlalchemy import create_engine, text
 
 from profile_v2.core.api import ProfileEngine
-from profile_v2.core.model import (CustomStatistic, DataSource,
-                                   FailureStatisticResult,
-                                   FailureStatisticResultType, ProfileRequest,
-                                   ProfileResponse, ProfileStatisticType,
-                                   SuccessStatisticResult, TypedStatistic)
+from profile_v2.core.model import (CustomStatistic, DataSource, DataSourceType,
+                                   ProfileRequest, ProfileResponse,
+                                   ProfileStatisticType,
+                                   SuccessStatisticResult, TypedStatistic,
+                                   UnsuccessfulStatisticResult,
+                                   UnsuccessfulStatisticResultType)
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +24,9 @@ class SqlAlchemyProfileEngine(ProfileEngine):
 
     @staticmethod
     def create_engine(datasource: DataSource):
-        if datasource.name == "snowflake":
+        if datasource.source == DataSourceType.SNOWFLAKE:
             return create_engine(datasource.connection_string)
-        elif datasource.name == "bigquery":
+        elif datasource.source == DataSourceType.BIGQUERY:
             assert datasource.extra_config and datasource.extra_config.get(
                 "credentials_path"
             ), "credentials_path is required for BigQuery"
@@ -34,7 +35,7 @@ class SqlAlchemyProfileEngine(ProfileEngine):
                 credentials_path=datasource.extra_config["credentials_path"],
             )
         else:
-            assert False, f"Unsupported datasource: {datasource.name}"
+            assert False, f"Unsupported datasource: {datasource.source}"
 
     def _do_profile(
         self, datasource: DataSource, requests: List[ProfileRequest]
@@ -57,8 +58,8 @@ class SqlAlchemyProfileEngine(ProfileEngine):
                         select_columns.append(column)
                     else:
                         logger.warning(f"Unsupported statistic type: {statistic.type}")
-                        response.data[fq_name] = FailureStatisticResult(
-                            type=FailureStatisticResultType.UNSUPPORTED,
+                        response.data[fq_name] = UnsuccessfulStatisticResult(
+                            type=UnsuccessfulStatisticResultType.UNSUPPORTED,
                             message=f"Unsupported statistic type: {statistic.type}",
                         )
                 elif isinstance(statistic, CustomStatistic):
@@ -66,8 +67,8 @@ class SqlAlchemyProfileEngine(ProfileEngine):
                     select_columns.append(column)
                 else:
                     logger.warning(f"Unsupported statistic spec: {statistic}")
-                    response.data[fq_name] = FailureStatisticResult(
-                        type=FailureStatisticResultType.UNSUPPORTED,
+                    response.data[fq_name] = UnsuccessfulStatisticResult(
+                        type=UnsuccessfulStatisticResultType.UNSUPPORTED,
                         message=f"Unsupported statistic spec: {statistic}",
                     )
 

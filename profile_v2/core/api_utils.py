@@ -4,9 +4,9 @@ from copy import deepcopy
 from typing import Callable, List, Optional
 
 from profile_v2.core.api import ProfileEngine
-from profile_v2.core.model import (DataSource, FailureStatisticResult,
-                                   ProfileRequest, ProfileResponse,
-                                   SuccessStatisticResult)
+from profile_v2.core.model import (DataSource, ProfileRequest, ProfileResponse,
+                                   SuccessStatisticResult,
+                                   UnsuccessfulStatisticResult)
 from profile_v2.core.model_utils import ModelCollections
 
 logger = logging.getLogger(__name__)
@@ -38,8 +38,8 @@ class SequentialFallbackProfileEngine(ProfileEngine):
             success_response: Optional[ProfileResponse] = engine_responses_by_type.get(
                 SuccessStatisticResult
             )
-            failed_response: Optional[ProfileResponse] = engine_responses_by_type.get(
-                FailureStatisticResult
+            unsuccessful_response: Optional[ProfileResponse] = (
+                engine_responses_by_type.get(UnsuccessfulStatisticResult)
             )
 
             if success_response:
@@ -48,10 +48,10 @@ class SequentialFallbackProfileEngine(ProfileEngine):
                 )
                 response.data.update(success_response.data)
 
-            if failed_response:
+            if unsuccessful_response:
                 # set the failed results in the response
                 # next engine will overwrite if so
-                response.data.update(failed_response.data)
+                response.data.update(unsuccessful_response.data)
 
                 # only keep in pending the requests that failed
                 aux: List[ProfileRequest] = []
@@ -59,7 +59,7 @@ class SequentialFallbackProfileEngine(ProfileEngine):
                     aux_stats = []
                     for statistic in request.statistics:
                         fq_name = statistic.fq_name
-                        if fq_name not in failed_response.data:
+                        if fq_name not in unsuccessful_response.data:
                             aux_stats.append(statistic)
                     if aux_stats:
                         aux.append(

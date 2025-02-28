@@ -2,30 +2,31 @@ import unittest
 
 from profile_v2.core.gx.gx import GxProfileEngine
 from profile_v2.core.model import (BatchSpec, CustomStatistic, DataSource,
-                                   FailureStatisticResult,
-                                   FailureStatisticResultType, ProfileRequest,
+                                   DataSourceType, ProfileRequest,
                                    ProfileResponse, ProfileStatisticType,
                                    SampleSpec, SuccessStatisticResult,
-                                   TypedStatistic)
+                                   TypedStatistic, UnsuccessfulStatisticResult,
+                                   UnsuccessfulStatisticResultType)
 from tests.core.common import (SNOWFLAKE_CONNECTION_STRING, SNOWFLAKE_DATABASE,
                                SNOWFLAKE_SCHEMA)
 
 
 class TestGxProfileEngine(unittest.TestCase):
 
+    _datasource = DataSource(
+        source=DataSourceType.SNOWFLAKE,
+        connection_string=SNOWFLAKE_CONNECTION_STRING,
+    )
+
     def test_api_distinct_count(self):
         profile_engine = GxProfileEngine()
 
         result = profile_engine.profile(
-            datasource=DataSource(
-                name="snowflake",
-                connection_string=SNOWFLAKE_CONNECTION_STRING,
-            ),
+            datasource=self._datasource,
             requests=[
                 ProfileRequest(
                     statistics=[
                         TypedStatistic(
-                            name=ProfileStatisticType.COLUMN_DISTINCT_COUNT.value,
                             fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count",
                             columns=["ID"],
                             type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,
@@ -50,21 +51,16 @@ class TestGxProfileEngine(unittest.TestCase):
         profile_engine = GxProfileEngine()
 
         result = profile_engine.profile(
-            datasource=DataSource(
-                name="snowflake",
-                connection_string=SNOWFLAKE_CONNECTION_STRING,
-            ),
+            datasource=self._datasource,
             requests=[
                 ProfileRequest(
                     statistics=[
                         TypedStatistic(
-                            name=ProfileStatisticType.COLUMN_DISTINCT_COUNT.value,
                             fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count",
                             columns=["ID"],
                             type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,
                         ),
                         TypedStatistic(
-                            name=ProfileStatisticType.COLUMN_DISTINCT_COUNT.value,
                             fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.distinct_count",
                             columns=["LABEL"],
                             type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,
@@ -92,15 +88,11 @@ class TestGxProfileEngine(unittest.TestCase):
         profile_engine = GxProfileEngine()
 
         result = profile_engine.profile(
-            datasource=DataSource(
-                name="snowflake",
-                connection_string=SNOWFLAKE_CONNECTION_STRING,
-            ),
+            datasource=self._datasource,
             requests=[
                 ProfileRequest(
                     statistics=[
                         CustomStatistic(
-                            name="custom_average_str_length",
                             fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.custom_average_str_length",
                             sql="CEIL(AVG(LEN(LABEL)))",
                         ),
@@ -118,28 +110,24 @@ class TestGxProfileEngine(unittest.TestCase):
             result.data[
                 "SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.custom_average_str_length"
             ],
-            FailureStatisticResult,
+            UnsuccessfulStatisticResult,
         )
         assert (
             result.data[
                 "SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.custom_average_str_length"
             ].type
-            == FailureStatisticResultType.UNSUPPORTED
+            == UnsuccessfulStatisticResultType.UNSUPPORTED
         )
 
     def test_api_sample(self):
         profile_engine = GxProfileEngine()
 
         result = profile_engine.profile(
-            datasource=DataSource(
-                name="snowflake",
-                connection_string=SNOWFLAKE_CONNECTION_STRING,
-            ),
+            datasource=self._datasource,
             requests=[
                 ProfileRequest(
                     statistics=[
                         TypedStatistic(
-                            name=ProfileStatisticType.COLUMN_DISTINCT_COUNT.value,
                             fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count",
                             columns=["ID"],
                             type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,
@@ -162,28 +150,24 @@ class TestGxProfileEngine(unittest.TestCase):
             result.data[
                 "SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count"
             ],
-            FailureStatisticResult,
+            UnsuccessfulStatisticResult,
         )
         assert (
             result.data[
                 "SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count"
             ].type
-            == FailureStatisticResultType.UNSUPPORTED
+            == UnsuccessfulStatisticResultType.UNSUPPORTED
         )
 
     def test_api_different_datasets(self):
         profile_engine = GxProfileEngine()
 
         result = profile_engine.profile(
-            datasource=DataSource(
-                name="snowflake",
-                connection_string=SNOWFLAKE_CONNECTION_STRING,
-            ),
+            datasource=self._datasource,
             requests=[
                 ProfileRequest(
                     statistics=[
                         TypedStatistic(
-                            name=ProfileStatisticType.COLUMN_DISTINCT_COUNT.value,
                             fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count",
                             columns=["ID"],
                             type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,
@@ -196,7 +180,6 @@ class TestGxProfileEngine(unittest.TestCase):
                 ProfileRequest(
                     statistics=[
                         TypedStatistic(
-                            name=ProfileStatisticType.COLUMN_DISTINCT_COUNT.value,
                             fq_name="SMOKE_TEST_DB.PUBLIC.TABLE_FROM_S3_STAGE.FILENAME.distinct_count",
                             columns=["FILENAME"],
                             type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,

@@ -5,10 +5,11 @@ from typing import List
 import great_expectations as gx
 
 from profile_v2.core.api import ProfileEngine
-from profile_v2.core.model import (DataSource, FailureStatisticResult,
-                                   FailureStatisticResultType, ProfileRequest,
-                                   ProfileResponse, ProfileStatisticType,
-                                   SuccessStatisticResult, TypedStatistic)
+from profile_v2.core.model import (DataSource, ProfileRequest, ProfileResponse,
+                                   ProfileStatisticType,
+                                   SuccessStatisticResult, TypedStatistic,
+                                   UnsuccessfulStatisticResult,
+                                   UnsuccessfulStatisticResultType)
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ class GxProfileEngine(ProfileEngine):
         context = gx.get_context()
 
         data_source = context.data_sources.add_snowflake(
-            name=datasource.name,
+            name=datasource.source.value,
             connection_string=datasource.connection_string,
         )
         logger.info(f"Data source added: {data_source}")
@@ -49,8 +50,8 @@ class GxProfileEngine(ProfileEngine):
             if request.batch.sample:
                 response.data.update(
                     {
-                        statistic.fq_name: FailureStatisticResult(
-                            type=FailureStatisticResultType.UNSUPPORTED,
+                        statistic.fq_name: UnsuccessfulStatisticResult(
+                            type=UnsuccessfulStatisticResultType.UNSUPPORTED,
                             message="Sampling not supported yet",
                         )
                         for statistic in request.statistics
@@ -83,14 +84,14 @@ class GxProfileEngine(ProfileEngine):
                         suite.add_expectation(expectation)
                     else:
                         logger.warning(f"Unsupported typed statistic spec: {statistic}")
-                        response.data[statistic.fq_name] = FailureStatisticResult(
-                            type=FailureStatisticResultType.UNSUPPORTED,
+                        response.data[statistic.fq_name] = UnsuccessfulStatisticResult(
+                            type=UnsuccessfulStatisticResultType.UNSUPPORTED,
                             message=f"Unsupported typed statistic spec: {statistic}",
                         )
                 else:
                     logger.warning(f"Unsupported statistic spec: {statistic}")
-                    response.data[statistic.fq_name] = FailureStatisticResult(
-                        type=FailureStatisticResultType.UNSUPPORTED,
+                    response.data[statistic.fq_name] = UnsuccessfulStatisticResult(
+                        type=UnsuccessfulStatisticResultType.UNSUPPORTED,
                         message=f"Unsupported statistic spec: {statistic}",
                     )
 

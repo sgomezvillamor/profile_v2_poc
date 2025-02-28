@@ -3,7 +3,9 @@ from collections import defaultdict
 from typing import Callable, Dict, List, Type, TypeVar
 
 from profile_v2.core.model import (BatchSpec, ProfileRequest, ProfileResponse,
-                                   StatisticResult, StatisticSpec)
+                                   StatisticResult, StatisticSpec,
+                                   SuccessStatisticResult,
+                                   UnsuccessfulStatisticResult)
 
 logger = logging.getLogger(__name__)
 
@@ -115,4 +117,10 @@ class ModelCollections:
         )
         for fq_statistic_name, result in response.data.items():
             responses_by_type[type(result)].data[fq_statistic_name] = result
+
+        assert set(responses_by_type.keys()) <= {
+            SuccessStatisticResult,
+            UnsuccessfulStatisticResult,
+        }, f"So far 2 types; unexpected response type: {responses_by_type.keys()}"
+
         return responses_by_type

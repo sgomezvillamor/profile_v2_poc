@@ -3,13 +3,17 @@ import unittest
 import pytest
 
 from profile_v2.core.api import ProfileEngineValueError
-from profile_v2.core.model import (BatchSpec, DataSource, ProfileRequest,
-                                   ProfileResponse, StatisticSpec,
-                                   SuccessStatisticResult)
+from profile_v2.core.model import (BatchSpec, DataSource, DataSourceType,
+                                   ProfileRequest, ProfileResponse,
+                                   StatisticSpec, SuccessStatisticResult)
 from tests.core.common import FixedResponseEngine
 
 
 class TestApi(unittest.TestCase):
+
+    _datasource = DataSource(
+        source=DataSourceType.SNOWFLAKE, connection_string="connection_string"
+    )
 
     def test_api_requests_validations_pass(self):
         response = ProfileResponse(
@@ -22,20 +26,19 @@ class TestApi(unittest.TestCase):
         requests = [
             ProfileRequest(
                 statistics=[
-                    StatisticSpec(name="stat_1", fq_name="fq_name_1"),
-                    StatisticSpec(name="stat_2", fq_name="fq_name_2"),
+                    StatisticSpec(fq_name="fq_name_1"),
+                    StatisticSpec(fq_name="fq_name_2"),
                 ],
                 batch=BatchSpec(fq_dataset_name="dataset_1"),
             )
         ]
-        datasource = DataSource(name="source", connection_string="connection_string")
-        assert profile_engine.profile(datasource, requests) == response
+        assert profile_engine.profile(self._datasource, requests) == response
 
         # adding a duplicated fq statistic name
         requests.append(
             ProfileRequest(
                 statistics=[
-                    StatisticSpec(name="stat_3", fq_name="fq_name_1"),
+                    StatisticSpec(fq_name="fq_name_1"),
                 ],
                 batch=BatchSpec(fq_dataset_name="dataset_2"),
             )
@@ -44,4 +47,4 @@ class TestApi(unittest.TestCase):
             ProfileEngineValueError,
             match="FQ statistic names must be unique across all requests",
         ):
-            profile_engine.profile(datasource, requests)
+            profile_engine.profile(self._datasource, requests)

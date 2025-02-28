@@ -1,9 +1,10 @@
 import unittest
 
 from profile_v2.core.model import (BatchSpec, CustomStatistic, DataSource,
-                                   ProfileRequest, ProfileResponse,
-                                   ProfileStatisticType, SampleSpec,
-                                   SuccessStatisticResult, TypedStatistic)
+                                   DataSourceType, ProfileRequest,
+                                   ProfileResponse, ProfileStatisticType,
+                                   SampleSpec, SuccessStatisticResult,
+                                   TypedStatistic)
 from profile_v2.core.sqlalchemy.sqlalchemy import SqlAlchemyProfileEngine
 from tests.core.common import (SNOWFLAKE_CONNECTION_STRING, SNOWFLAKE_DATABASE,
                                SNOWFLAKE_SCHEMA)
@@ -11,19 +12,20 @@ from tests.core.common import (SNOWFLAKE_CONNECTION_STRING, SNOWFLAKE_DATABASE,
 
 class TestSqlAlchemyProfileEngine(unittest.TestCase):
 
+    _datasource = DataSource(
+        source=DataSourceType.SNOWFLAKE,
+        connection_string=SNOWFLAKE_CONNECTION_STRING,
+    )
+
     def test_api_distinct_count(self):
         profile_engine = SqlAlchemyProfileEngine()
 
         result = profile_engine.profile(
-            datasource=DataSource(
-                name="snowflake",
-                connection_string=SNOWFLAKE_CONNECTION_STRING,
-            ),
+            datasource=self._datasource,
             requests=[
                 ProfileRequest(
                     statistics=[
                         TypedStatistic(
-                            name=ProfileStatisticType.COLUMN_DISTINCT_COUNT.value,
                             fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count",
                             columns=["ID"],
                             type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,
@@ -48,21 +50,16 @@ class TestSqlAlchemyProfileEngine(unittest.TestCase):
         profile_engine = SqlAlchemyProfileEngine()
 
         result = profile_engine.profile(
-            datasource=DataSource(
-                name="snowflake",
-                connection_string=SNOWFLAKE_CONNECTION_STRING,
-            ),
+            datasource=self._datasource,
             requests=[
                 ProfileRequest(
                     statistics=[
                         TypedStatistic(
-                            name=ProfileStatisticType.COLUMN_DISTINCT_COUNT.value,
                             fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count",
                             columns=["ID"],
                             type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,
                         ),
                         TypedStatistic(
-                            name=ProfileStatisticType.COLUMN_DISTINCT_COUNT.value,
                             fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.distinct_count",
                             columns=["LABEL"],
                             type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,
@@ -90,15 +87,11 @@ class TestSqlAlchemyProfileEngine(unittest.TestCase):
         profile_engine = SqlAlchemyProfileEngine()
 
         result = profile_engine.profile(
-            datasource=DataSource(
-                name="snowflake",
-                connection_string=SNOWFLAKE_CONNECTION_STRING,
-            ),
+            datasource=self._datasource,
             requests=[
                 ProfileRequest(
                     statistics=[
                         CustomStatistic(
-                            name="custom_average_str_length",
                             fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.LABEL.custom_average_str_length",
                             sql="CEIL(AVG(LEN(LABEL)))",
                         ),
@@ -123,15 +116,11 @@ class TestSqlAlchemyProfileEngine(unittest.TestCase):
         profile_engine = SqlAlchemyProfileEngine()
 
         result = profile_engine.profile(
-            datasource=DataSource(
-                name="snowflake",
-                connection_string=SNOWFLAKE_CONNECTION_STRING,
-            ),
+            datasource=self._datasource,
             requests=[
                 ProfileRequest(
                     statistics=[
                         TypedStatistic(
-                            name=ProfileStatisticType.COLUMN_DISTINCT_COUNT.value,
                             fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count",
                             columns=["ID"],
                             type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,
@@ -160,15 +149,11 @@ class TestSqlAlchemyProfileEngine(unittest.TestCase):
         profile_engine = SqlAlchemyProfileEngine()
 
         result = profile_engine.profile(
-            datasource=DataSource(
-                name="snowflake",
-                connection_string=SNOWFLAKE_CONNECTION_STRING,
-            ),
+            datasource=self._datasource,
             requests=[
                 ProfileRequest(
                     statistics=[
                         TypedStatistic(
-                            name=ProfileStatisticType.COLUMN_DISTINCT_COUNT.value,
                             fq_name="SMOKE_TEST_DB.PUBLIC.COVID19_EXTERNAL_TABLE.ID.distinct_count",
                             columns=["ID"],
                             type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,
@@ -181,7 +166,6 @@ class TestSqlAlchemyProfileEngine(unittest.TestCase):
                 ProfileRequest(
                     statistics=[
                         TypedStatistic(
-                            name=ProfileStatisticType.COLUMN_DISTINCT_COUNT.value,
                             fq_name="SMOKE_TEST_DB.PUBLIC.TABLE_FROM_S3_STAGE.FILENAME.distinct_count",
                             columns=["FILENAME"],
                             type=ProfileStatisticType.COLUMN_DISTINCT_COUNT,

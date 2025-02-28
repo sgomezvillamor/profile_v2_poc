@@ -5,12 +5,11 @@ from sqlalchemy import text
 
 from profile_v2.core.api import ProfileEngine
 from profile_v2.core.api_utils import ModelCollections, ParallelProfileEngine
-from profile_v2.core.model import (BatchSpec, DataSource,
-                                   FailureStatisticResult,
-                                   FailureStatisticResultType, ProfileRequest,
+from profile_v2.core.model import (BatchSpec, DataSource, ProfileRequest,
                                    ProfileResponse, ProfileStatisticType,
                                    StatisticSpec, SuccessStatisticResult,
-                                   TypedStatistic)
+                                   TypedStatistic, UnsuccessfulStatisticResult,
+                                   UnsuccessfulStatisticResultType)
 from profile_v2.core.sqlalchemy.sqlalchemy import SqlAlchemyProfileEngine
 
 logger = logging.getLogger(__name__)
@@ -51,8 +50,8 @@ class BigQueryInformationSchemaProfileEngine(ProfileEngine):
 
         for unsupported_request in unsupported_requests:
             for statistic in unsupported_request.statistics:
-                response.data[statistic.fq_name] = FailureStatisticResult(
-                    type=FailureStatisticResultType.UNSUPPORTED,
+                response.data[statistic.fq_name] = UnsuccessfulStatisticResult(
+                    type=UnsuccessfulStatisticResultType.UNSUPPORTED,
                     message=f"Unsupported statistic spec: {statistic}",
                 )
 
@@ -91,9 +90,14 @@ class BigQueryInformationSchemaProfileEngine(ProfileEngine):
 
     @staticmethod
     def _is_statistic_supported(statistic_spec: StatisticSpec) -> bool:
-        return isinstance(statistic_spec, TypedStatistic) and statistic_spec.type in [
-            ProfileStatisticType.TABLE_ROW_COUNT,
-        ]
+        return (
+            isinstance(statistic_spec, TypedStatistic)
+            and statistic_spec.type.is_table_level()
+            and statistic_spec.type
+            in [
+                ProfileStatisticType.TABLE_ROW_COUNT,
+            ]
+        )
 
 
 class BigQueryProfileEngine(ProfileEngine):
