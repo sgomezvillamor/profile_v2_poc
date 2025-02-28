@@ -8,6 +8,11 @@ from profile_v2.core.model import (BatchSpec, CustomStatistic, DataSource,
                                    FailureStatisticResultType, ProfileRequest,
                                    ProfileResponse, ProfileStatisticType,
                                    SuccessStatisticResult, TypedStatistic)
+from tests.core.common import (BIGQUERY_CONNECTION_STRING,
+                               BIGQUERY_CREDENTIALS_PATH,
+                               BIGQUERY_DATASET_CUSTOMER_DEMO,
+                               BIGQUERY_DATASET_DEPLOY_TEST_1K,
+                               BIGQUERY_PROJECT)
 
 
 class TestBigQueryUtils(unittest.TestCase):
@@ -21,13 +26,6 @@ class TestBigQueryUtils(unittest.TestCase):
         assert "table" == BigQueryUtils.bigquerytable_from_batch_spec(
             BatchSpec(fq_dataset_name="project.dataset.table")
         )
-
-
-BIGQUERY_CREDENTIALS_PATH = "/Users/sergio/workspace/github/acryldata/connector-tests/smoke-test/credentials/smoke-test.json"
-BIGQUERY_PROJECT = "acryl-staging"
-BIGQUERY_DATASET_CUSTOMER_DEMO = "customer_demo"
-BIGQUERY_DATASET_DEPLOY_TEST_1K = "deploy_test_1k"
-BIGQUERY_CONNECTION_STRING = f"bigquery://{BIGQUERY_PROJECT}"
 
 
 class TestBigQueryInformationSchemaProfileEngine(unittest.TestCase):

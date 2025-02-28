@@ -1,6 +1,4 @@
-import os
 import unittest
-import urllib.parse
 
 import pytest
 
@@ -13,16 +11,8 @@ from profile_v2.core.model import (BatchSpec, CustomStatistic, DataSource,
                                    SampleSpec, StatisticSpec,
                                    SuccessStatisticResult, TypedStatistic)
 from profile_v2.core.sqlalchemy.sqlalchemy import SqlAlchemyProfileEngine
-from tests.core.common import FixedResponseEngine
-
-SNOWFLAKE_USER = urllib.parse.quote(os.environ["SNOWFLAKE_USER"])
-SNOWFLAKE_PASSWORD = urllib.parse.quote(os.environ["SNOWFLAKE_PASSWORD"])
-SNOWFLAKE_ACCOUNT = "cfa31444"
-SNOWFLAKE_DATABASE = "SMOKE_TEST_DB"
-SNOWFLAKE_SCHEMA = "PUBLIC"
-SNOWFLAKE_WAREHOUSE = "SMOKE_TEST"
-SNOWFLAKE_ROLE = "datahub_role"
-SNOWFLAKE_CONNECTION_STRING = f"snowflake://{SNOWFLAKE_USER}:{SNOWFLAKE_PASSWORD}@{SNOWFLAKE_ACCOUNT}/{SNOWFLAKE_DATABASE}/{SNOWFLAKE_SCHEMA}?warehouse={SNOWFLAKE_WAREHOUSE}&role={SNOWFLAKE_ROLE}&application=datahub"
+from tests.core.common import (SNOWFLAKE_CONNECTION_STRING, SNOWFLAKE_DATABASE,
+                               SNOWFLAKE_SCHEMA, FixedResponseEngine)
 
 
 class TestApi(unittest.TestCase):

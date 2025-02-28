@@ -1,6 +1,8 @@
 import logging
+import os
 import threading
 import time
+import urllib.parse
 from datetime import datetime
 from typing import List, Optional
 
@@ -9,6 +11,22 @@ from profile_v2.core.model import (DataSource, ProfileRequest, ProfileResponse,
                                    SuccessStatisticResult)
 
 logger = logging.getLogger(__name__)
+
+
+SNOWFLAKE_USER = urllib.parse.quote(os.environ["SNOWFLAKE_USER"])
+SNOWFLAKE_PASSWORD = urllib.parse.quote(os.environ["SNOWFLAKE_PASSWORD"])
+SNOWFLAKE_ACCOUNT = "cfa31444"
+SNOWFLAKE_DATABASE = "SMOKE_TEST_DB"
+SNOWFLAKE_SCHEMA = "PUBLIC"
+SNOWFLAKE_WAREHOUSE = "SMOKE_TEST"
+SNOWFLAKE_ROLE = "datahub_role"
+SNOWFLAKE_CONNECTION_STRING = f"snowflake://{SNOWFLAKE_USER}:{SNOWFLAKE_PASSWORD}@{SNOWFLAKE_ACCOUNT}/{SNOWFLAKE_DATABASE}/{SNOWFLAKE_SCHEMA}?warehouse={SNOWFLAKE_WAREHOUSE}&role={SNOWFLAKE_ROLE}&application=datahub"
+
+BIGQUERY_CREDENTIALS_PATH = "/Users/sergio/workspace/github/acryldata/connector-tests/smoke-test/credentials/smoke-test.json"
+BIGQUERY_PROJECT = "acryl-staging"
+BIGQUERY_DATASET_CUSTOMER_DEMO = "customer_demo"
+BIGQUERY_DATASET_DEPLOY_TEST_1K = "deploy_test_1k"
+BIGQUERY_CONNECTION_STRING = f"bigquery://{BIGQUERY_PROJECT}"
 
 
 class FixedResponseEngine(ProfileEngine):
