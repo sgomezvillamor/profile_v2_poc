@@ -1,25 +1,55 @@
 import logging
-import threading
 import time
 import unittest
-from datetime import datetime
-from typing import List, Optional
+from typing import List
 
 from pytest import approx
 
-from profile_v2.core.api import ProfileEngine
+from profile_v2.core.api_utils import (ModelCollections, ParallelProfileEngine,
+                                       SequentialFallbackProfileEngine)
 from profile_v2.core.model import (BatchSpec, DataSource,
                                    FailureStatisticResult,
                                    FailureStatisticResultType, ProfileRequest,
                                    ProfileResponse, StatisticSpec,
                                    SuccessStatisticResult)
-from profile_v2.core.utils import (ModelCollections, ParallelProfileEngine,
-                                   SequentialFallbackProfileEngine)
+from tests.core.common import FixedResponseEngine, SuccessResponseEngine
 
 logger = logging.getLogger(__name__)
 
 
 class TestModelCollections(unittest.TestCase):
+
+    def test_validate_fq_statistic_name_uniqueness(self):
+        # unique fq statistic names
+        requests = [
+            ProfileRequest(
+                statistics=[
+                    StatisticSpec(name="stat1", fq_name="fq_name_stat1"),
+                    StatisticSpec(name="stat2", fq_name="fq_name_stat2"),
+                ],
+                batch=BatchSpec(fq_dataset_name="batch1"),
+            ),
+            ProfileRequest(
+                statistics=[
+                    StatisticSpec(name="stat3", fq_name="fq_name_stat3"),
+                    StatisticSpec(name="stat4", fq_name="fq_name_stat4"),
+                ],
+                batch=BatchSpec(fq_dataset_name="batch2"),
+            ),
+        ]
+        assert ModelCollections.validate_fq_statistic_name_uniqueness(requests)
+
+        # adding a duplicate fq statistic name
+        requests.append(
+            ProfileRequest(
+                statistics=[
+                    StatisticSpec(name="stat5", fq_name="fq_name_stat1"),
+                    StatisticSpec(name="stat6", fq_name="fq_name_stat6"),
+                ],
+                batch=BatchSpec(fq_dataset_name="batch3"),
+            )
+        )
+        assert not ModelCollections.validate_fq_statistic_name_uniqueness(requests)
 
     def test_group_requests_by_statistics_and_grouped_results(self):
         requests = [
@@ -243,16 +273,6 @@ class TestModelCollections(unittest.TestCase):
         }
 
 
-class FixedResponseEngine(ProfileEngine):
-    def __init__(self, response: ProfileResponse):
-        self.response = response
-
-    def do_profile(
-        self, datasource: DataSource, requests: List[ProfileRequest]
-    ) -> ProfileResponse:
-        return self.response
-
-
 class TestSequentialFallbackProfileEngine(unittest.TestCase):
 
     def test_with_single_successful_engine(self):
@@ -271,7 +291,7 @@ class TestSequentialFallbackProfileEngine(unittest.TestCase):
         engine = FixedResponseEngine(success_response)
         fallback_engine = SequentialFallbackProfileEngine([engine])
 
-        response = fallback_engine.do_profile(datasource, requests)
+        response = fallback_engine.profile(datasource, requests)
         print(response)
 
         assert response == ProfileResponse(
@@ -355,7 +375,7 @@ class TestSequentialFallbackProfileEngine(unittest.TestCase):
         )
         fallback_engine = SequentialFallbackProfileEngine([engine1, engine2, engine3])
 
-        response = fallback_engine.do_profile(datasource, requests)
+        response = fallback_engine.profile(datasource, requests)
         print(response)
         assert response == ProfileResponse(
             data={
@@ -423,7 +443,7 @@ class TestSequentialFallbackProfileEngine(unittest.TestCase):
         )
         fallback_engine = SequentialFallbackProfileEngine([engine1, engine2])
 
-        response = fallback_engine.do_profile(datasource, requests)
+        response = fallback_engine.profile(datasource, requests)
         print(response)
         assert response == ProfileResponse(
             data={
@@ -439,32 +459,6 @@ class TestSequentialFallbackProfileEngine(unittest.TestCase):
                 ),
             }
         )
-
-
-class SuccessResponseEngine(ProfileEngine):
-    def __init__(
-        self, success_value: int = 0, elapsed_time_millis: Optional[int] = None
-    ):
-        self.success_value = success_value
-        self.elapsed_time_millis = elapsed_time_millis
-
-    def do_profile(
-        self, datasource: DataSource, requests: List[ProfileRequest]
-    ) -> ProfileResponse:
-        response = ProfileResponse()
-        if self.elapsed_time_millis:
-            logger.info(
-                f"[{threading.get_ident()} {datetime.now()}] Sleeping for {self.elapsed_time_millis / 1000} seconds..."
-            )
-            time.sleep(self.elapsed_time_millis / 1000)
-
-        for request in requests:
-            for statistic in request.statistics:
-                response.data[statistic.fq_name] = SuccessStatisticResult(
-                    value=self.success_value
-                )
-        logger.info(f"[{threading.get_ident()} {datetime.now()}] Done!")
-        return response
 
 
 class TestParallelProfileEngine(unittest.TestCase):
@@ -520,7 +514,7 @@ class TestParallelProfileEngine(unittest.TestCase):
                 )
         return result
 
-    def test_do_profile_all_in_parallel(self):
+    def test_profile_all_in_parallel(self):
         parallel_engine = ParallelProfileEngine(
             engine=SuccessResponseEngine(success_value=1, elapsed_time_millis=1000),
             max_workers=3,
@@ -528,7 +522,7 @@ class TestParallelProfileEngine(unittest.TestCase):
         )
 
         start_time = time.time()
-        response = parallel_engine.do_profile(self.datasource, self.requests)
+        response = parallel_engine.profile(self.datasource, self.requests)
         end_time = time.time()
         elapsed_time = end_time - start_time
 
@@ -536,7 +530,7 @@ class TestParallelProfileEngine(unittest.TestCase):
         # all requests in parallel, so elapsed time should be around 1 second = time of the slowest request
         assert elapsed_time == approx(1, abs=0.1)
 
-    def test_do_profile_each_statistic_individually(self):
+    def test_profile_each_statistic_individually(self):
         parallel_engine = ParallelProfileEngine(
             engine=SuccessResponseEngine(success_value=1, elapsed_time_millis=1000),
             max_workers=2,
@@ -544,7 +538,7 @@ class TestParallelProfileEngine(unittest.TestCase):
         )
 
         start_time = time.time()
-        response = parallel_engine.do_profile(self.datasource, self.requests)
+        response = parallel_engine.profile(self.datasource, self.requests)
         end_time = time.time()
         elapsed_time = end_time - start_time
 

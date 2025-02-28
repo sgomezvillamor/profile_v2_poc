@@ -4,6 +4,7 @@ from typing import Dict, List, Tuple
 from sqlalchemy import text
 
 from profile_v2.core.api import ProfileEngine
+from profile_v2.core.api_utils import ModelCollections, ParallelProfileEngine
 from profile_v2.core.model import (BatchSpec, DataSource,
                                    FailureStatisticResult,
                                    FailureStatisticResultType, ProfileRequest,
@@ -11,7 +12,6 @@ from profile_v2.core.model import (BatchSpec, DataSource,
                                    StatisticSpec, SuccessStatisticResult,
                                    TypedStatistic)
 from profile_v2.core.sqlalchemy.sqlalchemy import SqlAlchemyProfileEngine
-from profile_v2.core.utils import ModelCollections, ParallelProfileEngine
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class BigQueryInformationSchemaProfileEngine(ProfileEngine):
     While requests can span for multiple bigquery tables and datasets, requests are internally processed in batches by dataset.
     """
 
-    def do_profile(
+    def _do_profile(
         self, datasource: DataSource, requests: List[ProfileRequest]
     ) -> ProfileResponse:
         response = ProfileResponse()
@@ -153,7 +153,7 @@ class BigQueryProfileEngine(ProfileEngine):
             batch_requests_predicate=BigQueryProfileEngine._group_requests_by_bigquerydataset,
         )
 
-    def do_profile(
+    def _do_profile(
         self, datasource: DataSource, requests: List[ProfileRequest]
     ) -> ProfileResponse:
         response = ProfileResponse()
@@ -162,11 +162,11 @@ class BigQueryProfileEngine(ProfileEngine):
             BigQueryProfileEngine._separate_information_schema_requests(requests)
         )
         information_schema_response = (
-            self.bq_information_schema_profile_engine.do_profile(
+            self.bq_information_schema_profile_engine._do_profile(
                 datasource, information_schema_requests
             )
         )
-        other_requests_response = self.parallel_sqlalchemy_profile_engine.do_profile(
+        other_requests_response = self.parallel_sqlalchemy_profile_engine._do_profile(
             datasource, other_requests
         )
 

@@ -32,7 +32,7 @@ BIGQUERY_CONNECTION_STRING = f"bigquery://{BIGQUERY_PROJECT}"
 
 class TestBigQueryInformationSchemaProfileEngine(unittest.TestCase):
 
-    def test_do_profile_with_unsupported_statistic(self):
+    def test_profile_with_unsupported_statistic(self):
         datasource = DataSource(
             name="bigquery",
             connection_string=BIGQUERY_CONNECTION_STRING,
@@ -55,7 +55,7 @@ class TestBigQueryInformationSchemaProfileEngine(unittest.TestCase):
             )
         ]
         engine = BigQueryInformationSchemaProfileEngine()
-        response = engine.do_profile(datasource, requests)
+        response = engine.profile(datasource, requests)
         print(response)
 
         assert len(response.data) == 1
@@ -68,7 +68,7 @@ class TestBigQueryInformationSchemaProfileEngine(unittest.TestCase):
             == FailureStatisticResultType.UNSUPPORTED
         )
 
-    def test_do_profile_with_supported_statistic(self):
+    def test_profile_with_supported_statistic(self):
         datasource = DataSource(
             name="bigquery",
             connection_string=BIGQUERY_CONNECTION_STRING,
@@ -92,7 +92,7 @@ class TestBigQueryInformationSchemaProfileEngine(unittest.TestCase):
             )
         ]
         engine = BigQueryInformationSchemaProfileEngine()
-        response = engine.do_profile(datasource, requests)
+        response = engine.profile(datasource, requests)
         print(response)
 
         assert response == ProfileResponse(
@@ -103,7 +103,7 @@ class TestBigQueryInformationSchemaProfileEngine(unittest.TestCase):
             },
         )
 
-    def test_do_profile_with_supported_statistic_across_multiple_tables(self):
+    def test_profile_with_supported_statistic_across_multiple_tables(self):
         datasource = DataSource(
             name="bigquery",
             connection_string=BIGQUERY_CONNECTION_STRING,
@@ -153,7 +153,7 @@ class TestBigQueryInformationSchemaProfileEngine(unittest.TestCase):
             ),
         ]
         engine = BigQueryInformationSchemaProfileEngine()
-        response = engine.do_profile(datasource, requests)
+        response = engine.profile(datasource, requests)
         print(response)
 
         assert response == ProfileResponse(
@@ -170,7 +170,7 @@ class TestBigQueryInformationSchemaProfileEngine(unittest.TestCase):
             },
         )
 
-    def test_do_profile_with_supported_statistic_across_multiple_datasets(self):
+    def test_profile_with_supported_statistic_across_multiple_datasets(self):
         datasource = DataSource(
             name="bigquery",
             connection_string=BIGQUERY_CONNECTION_STRING,
@@ -233,7 +233,7 @@ class TestBigQueryInformationSchemaProfileEngine(unittest.TestCase):
             ),
         ]
         engine = BigQueryInformationSchemaProfileEngine()
-        response = engine.do_profile(datasource, requests)
+        response = engine.profile(datasource, requests)
         print(response)
 
         assert response == ProfileResponse(
@@ -363,14 +363,28 @@ class TestBigQueryProfileEngine(unittest.TestCase):
     ]
 
     def test_group_requests_by_bigquerydataset(self):
-        batch_requests = BigQueryProfileEngine._group_requests_by_bigquerydataset(self.requests)
+        batch_requests = BigQueryProfileEngine._group_requests_by_bigquerydataset(
+            self.requests
+        )
         print(batch_requests)
         assert len(batch_requests) == 2
-        distinct_bigquery_datasets_batch_0 = set(BigQueryUtils.bigquerydataset_from_batch_spec(request.batch) for request in batch_requests[0])
-        distinct_bigquery_datasets_batch_1 = set(BigQueryUtils.bigquerydataset_from_batch_spec(request.batch) for request in batch_requests[1])
-        assert len(distinct_bigquery_datasets_batch_0)  == len(distinct_bigquery_datasets_batch_1) == 1
+        distinct_bigquery_datasets_batch_0 = set(
+            BigQueryUtils.bigquerydataset_from_batch_spec(request.batch)
+            for request in batch_requests[0]
+        )
+        distinct_bigquery_datasets_batch_1 = set(
+            BigQueryUtils.bigquerydataset_from_batch_spec(request.batch)
+            for request in batch_requests[1]
+        )
+        assert (
+            len(distinct_bigquery_datasets_batch_0)
+            == len(distinct_bigquery_datasets_batch_1)
+            == 1
+        )
         assert distinct_bigquery_datasets_batch_0 != distinct_bigquery_datasets_batch_1
-        assert distinct_bigquery_datasets_batch_0.union(distinct_bigquery_datasets_batch_1) == {
+        assert distinct_bigquery_datasets_batch_0.union(
+            distinct_bigquery_datasets_batch_1
+        ) == {
             f"{BIGQUERY_DATASET_CUSTOMER_DEMO}",
             f"{BIGQUERY_DATASET_DEPLOY_TEST_1K}",
         }
@@ -385,7 +399,7 @@ class TestBigQueryProfileEngine(unittest.TestCase):
         )
 
         engine = BigQueryProfileEngine()
-        response = engine.do_profile(datasource, self.requests)
+        response = engine.profile(datasource, self.requests)
         print(response)
         assert response == ProfileResponse(
             data={

@@ -8,8 +8,7 @@ from profile_v2.core.model import (CustomStatistic, DataSource,
                                    FailureStatisticResult,
                                    FailureStatisticResultType, ProfileRequest,
                                    ProfileResponse, ProfileStatisticType,
-                                   StatisticSpec, SuccessStatisticResult,
-                                   TypedStatistic)
+                                   SuccessStatisticResult, TypedStatistic)
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +36,7 @@ class SqlAlchemyProfileEngine(ProfileEngine):
         else:
             assert False, f"Unsupported datasource: {datasource.name}"
 
-    def do_profile(
+    def _do_profile(
         self, datasource: DataSource, requests: List[ProfileRequest]
     ) -> ProfileResponse:
         response = ProfileResponse()

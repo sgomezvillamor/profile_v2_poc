@@ -1,16 +1,19 @@
 import os
+import unittest
 import urllib.parse
 
 import pytest
 
+from profile_v2.core.api import ProfileEngineValueError
 from profile_v2.core.gx.gx import GxProfileEngine
 from profile_v2.core.model import (BatchSpec, CustomStatistic, DataSource,
                                    FailureStatisticResult,
                                    FailureStatisticResultType, ProfileRequest,
                                    ProfileResponse, ProfileStatisticType,
-                                   SampleSpec, SuccessStatisticResult,
-                                   TypedStatistic)
+                                   SampleSpec, StatisticSpec,
+                                   SuccessStatisticResult, TypedStatistic)
 from profile_v2.core.sqlalchemy.sqlalchemy import SqlAlchemyProfileEngine
+from tests.core.common import FixedResponseEngine
 
 SNOWFLAKE_USER = urllib.parse.quote(os.environ["SNOWFLAKE_USER"])
 SNOWFLAKE_PASSWORD = urllib.parse.quote(os.environ["SNOWFLAKE_PASSWORD"])
@@ -22,11 +25,49 @@ SNOWFLAKE_ROLE = "datahub_role"
 SNOWFLAKE_CONNECTION_STRING = f"snowflake://{SNOWFLAKE_USER}:{SNOWFLAKE_PASSWORD}@{SNOWFLAKE_ACCOUNT}/{SNOWFLAKE_DATABASE}/{SNOWFLAKE_SCHEMA}?warehouse={SNOWFLAKE_WAREHOUSE}&role={SNOWFLAKE_ROLE}&application=datahub"
 
 
+class TestApi(unittest.TestCase):
+
+    def test_api_requests_validations_pass(self):
+        response = ProfileResponse(
+            data={
+                "fq_name_1": SuccessStatisticResult(value=0),
+                "fq_name_2": SuccessStatisticResult(value=0),
+            }
+        )
+        profile_engine = FixedResponseEngine(response)
+        requests = [
+            ProfileRequest(
+                statistics=[
+                    StatisticSpec(name="stat_1", fq_name="fq_name_1"),
+                    StatisticSpec(name="stat_2", fq_name="fq_name_2"),
+                ],
+                batch=BatchSpec(fq_dataset_name="dataset_1"),
+            )
+        ]
+        datasource = DataSource(name="source", connection_string="connection_string")
+        assert profile_engine.profile(datasource, requests) == response
+
+        # adding a duplicated fq statistic name
+        requests.append(
+            ProfileRequest(
+                statistics=[
+                    StatisticSpec(name="stat_3", fq_name="fq_name_1"),
+                ],
+                batch=BatchSpec(fq_dataset_name="dataset_2"),
+            )
+        )
+        with pytest.raises(
+            ProfileEngineValueError,
+            match="FQ statistic names must be unique across all requests",
+        ):
+            profile_engine.profile(datasource, requests)
+
+
 @pytest.mark.parametrize("engine_cls", [GxProfileEngine, SqlAlchemyProfileEngine])
 def test_api_distinct_count(engine_cls):
     profile_engine = engine_cls()
 
-    result = profile_engine.do_profile(
+    result = profile_engine.profile(
         datasource=DataSource(
             name="snowflake",
             connection_string=SNOWFLAKE_CONNECTION_STRING,
@@ -61,7 +102,7 @@ def test_api_distinct_count(engine_cls):
 def test_api_distinct_count_multiple(engine_cls):
     profile_engine = engine_cls()
 
-    result = profile_engine.do_profile(
+    result = profile_engine.profile(
         datasource=DataSource(
             name="snowflake",
             connection_string=SNOWFLAKE_CONNECTION_STRING,
@@ -105,7 +146,7 @@ def test_api_distinct_count_multiple(engine_cls):
 def test_api_custom_statistic(engine_cls):
     profile_engine = engine_cls()
 
-    result = profile_engine.do_profile(
+    result = profile_engine.profile(
         datasource=DataSource(
             name="snowflake",
             connection_string=SNOWFLAKE_CONNECTION_STRING,
@@ -158,7 +199,7 @@ def test_api_custom_statistic(engine_cls):
 def test_api_sample(engine_cls):
     profile_engine = engine_cls()
 
-    result = profile_engine.do_profile(
+    result = profile_engine.profile(
         datasource=DataSource(
             name="snowflake",
             connection_string=SNOWFLAKE_CONNECTION_STRING,
@@ -215,7 +256,7 @@ def test_api_sample(engine_cls):
 def test_api_different_datasets(engine_cls):
     profile_engine = engine_cls()
 
-    result = profile_engine.do_profile(
+    result = profile_engine.profile(
         datasource=DataSource(
             name="snowflake",
             connection_string=SNOWFLAKE_CONNECTION_STRING,

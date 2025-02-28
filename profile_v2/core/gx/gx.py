@@ -26,7 +26,7 @@ class GxProfileEngine(ProfileEngine):
     - custom statistics
     """
 
-    def do_profile(
+    def _do_profile(
         self, datasource: DataSource, requests: List[ProfileRequest]
     ) -> ProfileResponse:
         response = ProfileResponse()
