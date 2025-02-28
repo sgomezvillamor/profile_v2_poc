@@ -1,11 +1,12 @@
 import logging
 from collections import defaultdict
-from typing import Callable, Dict, List, Type, TypeVar
+from typing import Callable, Dict, List, Optional, Type, TypeVar
 
 from profile_v2.core.model import (BatchSpec, ProfileRequest, ProfileResponse,
                                    StatisticResult, StatisticSpec,
                                    SuccessStatisticResult,
-                                   UnsuccessfulStatisticResult)
+                                   UnsuccessfulStatisticResult,
+                                   UnsuccessfulStatisticResultType)
 
 logger = logging.getLogger(__name__)
 
@@ -124,3 +125,19 @@ class ModelCollections:
         }, f"So far 2 types; unexpected response type: {responses_by_type.keys()}"
 
         return responses_by_type
+
+    @staticmethod
+    def failed_response_for_request(
+        request: ProfileRequest,
+        unsuccessful_result_type: UnsuccessfulStatisticResultType,
+        message: Optional[str] = None,
+        exception: Optional[Exception] = None,
+    ) -> ProfileResponse:
+        response = ProfileResponse()
+        for statistic in request.statistics:
+            response.data[statistic.fq_name] = UnsuccessfulStatisticResult(
+                type=unsuccessful_result_type,
+                message=message,
+                exception=exception,
+            )
+        return response

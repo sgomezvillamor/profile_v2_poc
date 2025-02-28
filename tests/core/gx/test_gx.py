@@ -18,7 +18,7 @@ class TestGxProfileEngine(unittest.TestCase):
         connection_string=SNOWFLAKE_CONNECTION_STRING,
     )
 
-    def test_api_distinct_count(self):
+    def test_distinct_count(self):
         profile_engine = GxProfileEngine()
 
         result = profile_engine.profile(
@@ -47,7 +47,7 @@ class TestGxProfileEngine(unittest.TestCase):
             },
         )
 
-    def test_api_distinct_count_multiple(self):
+    def test_distinct_count_multiple(self):
         profile_engine = GxProfileEngine()
 
         result = profile_engine.profile(
@@ -84,7 +84,7 @@ class TestGxProfileEngine(unittest.TestCase):
             },
         )
 
-    def test_api_custom_statistic(self):
+    def test_custom_statistic(self):
         profile_engine = GxProfileEngine()
 
         result = profile_engine.profile(
@@ -119,7 +119,7 @@ class TestGxProfileEngine(unittest.TestCase):
             == UnsuccessfulStatisticResultType.UNSUPPORTED
         )
 
-    def test_api_sample(self):
+    def test_sample(self):
         profile_engine = GxProfileEngine()
 
         result = profile_engine.profile(
@@ -159,7 +159,7 @@ class TestGxProfileEngine(unittest.TestCase):
             == UnsuccessfulStatisticResultType.UNSUPPORTED
         )
 
-    def test_api_different_datasets(self):
+    def test_different_datasets(self):
         profile_engine = GxProfileEngine()
 
         result = profile_engine.profile(
