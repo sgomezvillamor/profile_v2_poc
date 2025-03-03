@@ -10,6 +10,7 @@ from profile_v2.core.model import (BatchSpec, DataSource, ProfileRequest,
                                    StatisticSpec, SuccessStatisticResult,
                                    TypedStatistic, UnsuccessfulStatisticResult,
                                    UnsuccessfulStatisticResultType)
+from profile_v2.core.report import ProfileCoreReport
 from profile_v2.core.sqlalchemy.sqlalchemy import SqlAlchemyProfileEngine
 
 logger = logging.getLogger(__name__)
@@ -36,6 +37,9 @@ class BigQueryInformationSchemaProfileEngine(ProfileEngine):
 
     While requests can span for multiple bigquery tables and datasets, requests are internally processed in batches by dataset.
     """
+
+    def __init__(self, report: ProfileCoreReport = ProfileCoreReport()):
+        super().__init__(report)
 
     def _do_profile(
         self, datasource: DataSource, requests: List[ProfileRequest]
@@ -69,22 +73,41 @@ class BigQueryInformationSchemaProfileEngine(ProfileEngine):
             # TODO: add where clause with table_ids from [extract-table-id(request.batch) for request in requests]
             logger.info(text(select_query))
             with engine.connect() as conn:
-                result = conn.execute(text(select_query))
-                row_counts_by_table = {row[0]: row[1] for row in result}
-                logger.info(row_counts_by_table)
+                try:
+                    self.report_issue_query()
 
-                for request in requests:
-                    for statistic in request.statistics:
-                        assert BigQueryInformationSchemaProfileEngine._is_statistic_supported(
-                            statistic
+                    result = conn.execute(text(select_query))
+                    row_counts_by_table = {row[0]: row[1] for row in result}
+                    logger.info(row_counts_by_table)
+
+                    for request in requests:
+                        for statistic in request.statistics:
+                            assert BigQueryInformationSchemaProfileEngine._is_statistic_supported(
+                                statistic
+                            )
+                            statistic_fq_name = statistic.fq_name
+                            table_name = BigQueryUtils.bigquerytable_from_batch_spec(
+                                request.batch
+                            )
+                            response.data[statistic_fq_name] = SuccessStatisticResult(
+                                value=row_counts_by_table[table_name]
+                            )
+                except Exception as e:
+                    self.report_unsuccessful_query(
+                        UnsuccessfulStatisticResultType.FAILURE
+                    )
+                    logger.error(f"Error profiling requests: {requests}")
+                    logger.exception(e)
+                    for request in requests:
+                        failed_response_for_request = ModelCollections.failed_response_for_request(
+                            request,
+                            unsuccessful_result_type=UnsuccessfulStatisticResultType.FAILURE,
+                            message=str(e),
+                            exception=e,
                         )
-                        statistic_fq_name = statistic.fq_name
-                        table_name = BigQueryUtils.bigquerytable_from_batch_spec(
-                            request.batch
-                        )
-                        response.data[statistic_fq_name] = SuccessStatisticResult(
-                            value=row_counts_by_table[table_name]
-                        )
+                        response.data.update(failed_response_for_request.data)
+                else:
+                    self.report_successful_query()
 
         return response
 
@@ -147,12 +170,16 @@ class BigQueryProfileEngine(ProfileEngine):
         )
         return [requests for requests in requests_by_dataset.values()]
 
-    def __init__(self, max_workers: int = 4):
+    def __init__(
+        self, report: ProfileCoreReport = ProfileCoreReport(), max_workers: int = 4
+    ):
+        super().__init__(report)
+
         self.bq_information_schema_profile_engine = (
-            BigQueryInformationSchemaProfileEngine()
+            BigQueryInformationSchemaProfileEngine(report=self.report)
         )
         self.parallel_sqlalchemy_profile_engine = ParallelProfileEngine(
-            engine=SqlAlchemyProfileEngine(),
+            engine=SqlAlchemyProfileEngine(report=self.report),
             max_workers=max_workers,
             batch_requests_predicate=BigQueryProfileEngine._group_requests_by_bigquerydataset,
         )

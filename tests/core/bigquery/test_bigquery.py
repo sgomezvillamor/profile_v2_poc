@@ -9,6 +9,7 @@ from profile_v2.core.model import (BatchSpec, CustomStatistic, DataSource,
                                    SuccessStatisticResult, TypedStatistic,
                                    UnsuccessfulStatisticResult,
                                    UnsuccessfulStatisticResultType)
+from profile_v2.core.report import ProfileCoreReport
 from tests.core.common import (BIGQUERY_CONNECTION_STRING,
                                BIGQUERY_CREDENTIALS_PATH,
                                BIGQUERY_DATASET_CUSTOMER_DEMO,
@@ -216,6 +217,116 @@ class TestBigQueryInformationSchemaProfileEngine(unittest.TestCase):
             },
         )
 
+    def test_profile_groups_requests_by_bigquerydataset(self):
+        requests = [
+            ProfileRequest(
+                statistics=[
+                    TypedStatistic(
+                        fq_name="acryl-staging.customer_demo.PurchaseEvent.row_count",
+                        type=ProfileStatisticType.TABLE_ROW_COUNT,
+                    ),
+                ],
+                batch=BatchSpec(
+                    fq_dataset_name=f"{BIGQUERY_PROJECT}.{BIGQUERY_DATASET_CUSTOMER_DEMO}.PurchaseEvent",
+                ),
+            ),
+            ProfileRequest(
+                statistics=[
+                    TypedStatistic(
+                        fq_name="acryl-staging.customer_demo.revenue.row_count",
+                        type=ProfileStatisticType.TABLE_ROW_COUNT,
+                    ),
+                ],
+                batch=BatchSpec(
+                    fq_dataset_name=f"{BIGQUERY_PROJECT}.{BIGQUERY_DATASET_CUSTOMER_DEMO}.revenue",
+                ),
+            ),
+            ProfileRequest(
+                statistics=[
+                    TypedStatistic(
+                        fq_name="acryl-staging.customer_demo.test_assertions.row_count",
+                        type=ProfileStatisticType.TABLE_ROW_COUNT,
+                    ),
+                ],
+                batch=BatchSpec(
+                    fq_dataset_name=f"{BIGQUERY_PROJECT}.{BIGQUERY_DATASET_CUSTOMER_DEMO}.test_assertions",
+                ),
+            ),
+            ProfileRequest(
+                statistics=[
+                    TypedStatistic(
+                        fq_name="acryl-staging.deploy_test_1k.table_1.row_count",
+                        type=ProfileStatisticType.TABLE_ROW_COUNT,
+                    ),
+                ],
+                batch=BatchSpec(
+                    fq_dataset_name=f"{BIGQUERY_PROJECT}.{BIGQUERY_DATASET_DEPLOY_TEST_1K}.table_1",
+                ),
+            ),
+        ]
+        engine = BigQueryInformationSchemaProfileEngine(
+            report=ProfileCoreReport(),  # instantiate report to avoid mutable default argument issues
+        )
+        _ = engine.profile(self._datasource, requests)
+
+        assert (
+            engine.report.num_issued_queries_by_engine[
+                "BigQueryInformationSchemaProfileEngine"
+            ]
+            == 2
+        )
+
+    def test_fail_non_existing_bigquerydataset(self):
+        requests = [
+            ProfileRequest(
+                statistics=[
+                    TypedStatistic(
+                        fq_name="acryl-staging.non_existing_dataset.table1.row_count",
+                        type=ProfileStatisticType.TABLE_ROW_COUNT,
+                    ),
+                ],
+                batch=BatchSpec(
+                    fq_dataset_name=f"{BIGQUERY_PROJECT}.non_existing_dataset.table1",
+                ),
+            ),
+            ProfileRequest(
+                statistics=[
+                    TypedStatistic(
+                        fq_name="acryl-staging.non_existing_dataset.table2.row_count",
+                        type=ProfileStatisticType.TABLE_ROW_COUNT,
+                    ),
+                ],
+                batch=BatchSpec(
+                    fq_dataset_name=f"{BIGQUERY_PROJECT}.non_existing_dataset.table2",
+                ),
+            ),
+        ]
+        engine = BigQueryInformationSchemaProfileEngine()
+        response = engine.profile(self._datasource, requests)
+        print(response)
+        print(engine.report)
+        assert len(response.data) == 2
+        assert (
+            isinstance(
+                response.data["acryl-staging.non_existing_dataset.table1.row_count"],
+                UnsuccessfulStatisticResult,
+            )
+            and response.data[
+                "acryl-staging.non_existing_dataset.table1.row_count"
+            ].type
+            == UnsuccessfulStatisticResultType.FAILURE
+        )
+        assert (
+            isinstance(
+                response.data["acryl-staging.non_existing_dataset.table2.row_count"],
+                UnsuccessfulStatisticResult,
+            )
+            and response.data[
+                "acryl-staging.non_existing_dataset.table2.row_count"
+            ].type
+            == UnsuccessfulStatisticResultType.FAILURE
+        )
+
 
 class TestBigQueryProfileEngine(unittest.TestCase):
 
@@ -380,3 +491,4 @@ class TestBigQueryProfileEngine(unittest.TestCase):
                 ),
             },
         )
+        print(engine.report)

@@ -12,6 +12,7 @@ from profile_v2.core.model import (CustomStatistic, DataSource, DataSourceType,
                                    UnsuccessfulStatisticResult,
                                    UnsuccessfulStatisticResultType)
 from profile_v2.core.model_utils import ModelCollections
+from profile_v2.core.report import ProfileCoreReport
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +22,11 @@ class SqlAlchemyProfileEngine(ProfileEngine):
     Generic profile engine using SQLAlchemy.
 
     TODO:
-    - TABLE_ROW_COUNT statistic
+    - TABLE_ROW_COUNT statistic, support it depending on "expensiveness" considerations
     """
+
+    def __init__(self, report: ProfileCoreReport = ProfileCoreReport()):
+        super().__init__(report)
 
     @staticmethod
     def create_engine(datasource: DataSource):
@@ -58,12 +62,14 @@ class SqlAlchemyProfileEngine(ProfileEngine):
                     logger.info(
                         f"Dialect-specific SQL statement: {dialect_select_statement}"
                     )
+                    self.report_issue_query()
                     for column, value in self._execute_select(
                         engine, dialect_select_statement
                     ):
                         fq_name = fq_name_mappings[column]
                         response.data[fq_name] = SuccessStatisticResult(value=value)
             except Exception as e:
+                self.report_unsuccessful_query(UnsuccessfulStatisticResultType.FAILURE)
                 logger.error(f"Error profiling request: {request}")
                 logger.exception(e)
                 failed_response_for_request = ModelCollections.failed_response_for_request(
@@ -73,6 +79,8 @@ class SqlAlchemyProfileEngine(ProfileEngine):
                     exception=e,
                 )
                 response.data.update(failed_response_for_request.data)
+            else:
+                self.report_successful_query()
 
         return response
 

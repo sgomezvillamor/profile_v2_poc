@@ -125,4 +125,4 @@ class UnsuccessfulStatisticResult(StatisticResult):
 
 @dataclass
 class ProfileResponse:
-    data: Dict[StatisticFQName, StatisticResult] = field(default_factory=defaultdict)
+    data: Dict[StatisticFQName, StatisticResult] = field(default_factory=dict)

@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from profile_v2.core.model import DataSource, ProfileRequest, ProfileResponse
+from profile_v2.core.model import (DataSource, ProfileRequest, ProfileResponse,
+                                   UnsuccessfulStatisticResultType)
 from profile_v2.core.model_utils import ModelCollections
+from profile_v2.core.report import ProfileCoreReport
 
 
 class ProfileEngineException(Exception):
@@ -14,6 +16,9 @@ class ProfileEngineValueError(ProfileEngineException, ValueError):
 
 
 class ProfileEngine(ABC):
+
+    def __init__(self, report: ProfileCoreReport = ProfileCoreReport()):
+        self.report = report
 
     def profile(
         self, datasource: DataSource, requests: List[ProfileRequest]
@@ -32,3 +37,14 @@ class ProfileEngine(ABC):
             raise ProfileEngineValueError(
                 "FQ statistic names must be unique across all requests"
             )
+
+    def report_issue_query(self) -> None:
+        self.report.issue_query(self.__class__.__name__)
+
+    def report_successful_query(self) -> None:
+        self.report.successful_query(self.__class__.__name__)
+
+    def report_unsuccessful_query(
+        self, status: UnsuccessfulStatisticResultType
+    ) -> None:
+        self.report.unsuccessful_query(self.__class__.__name__, status)
