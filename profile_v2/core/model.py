@@ -126,3 +126,6 @@ class UnsuccessfulStatisticResult(StatisticResult):
 @dataclass
 class ProfileResponse:
     data: Dict[StatisticFQName, StatisticResult] = field(default_factory=dict)
+
+    def update(self, other: "ProfileResponse"):
+        self.data.update(other.data)

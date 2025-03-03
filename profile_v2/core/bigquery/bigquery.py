@@ -105,7 +105,7 @@ class BigQueryInformationSchemaProfileEngine(ProfileEngine):
                             message=str(e),
                             exception=e,
                         )
-                        response.data.update(failed_response_for_request.data)
+                        response.update(failed_response_for_request)
                 else:
                     self.report_successful_query()
 
@@ -201,7 +201,7 @@ class BigQueryProfileEngine(ProfileEngine):
             datasource, other_requests
         )
 
-        response.data.update(information_schema_response.data)
-        response.data.update(other_requests_response.data)
+        response.update(information_schema_response)
+        response.update(other_requests_response)
 
         return response

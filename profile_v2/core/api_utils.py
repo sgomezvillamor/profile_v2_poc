@@ -46,12 +46,12 @@ class SequentialFallbackProfileEngine(ProfileEngine):
                 logger.info(
                     f"{engine.__class__.__name__} successfully processed: {success_response}"
                 )
-                response.data.update(success_response.data)
+                response.update(success_response)
 
             if unsuccessful_response:
                 # set the failed results in the response
                 # next engine will overwrite if so
-                response.data.update(unsuccessful_response.data)
+                response.update(unsuccessful_response)
 
                 # only keep in pending the requests that failed
                 aux: List[ProfileRequest] = []
@@ -117,6 +117,6 @@ class ParallelProfileEngine(ProfileEngine):
                 batch_response_futures
             ):
                 batch_response = batch_response_future.result()
-                response.data.update(batch_response.data)
+                response.update(batch_response)
 
         return response

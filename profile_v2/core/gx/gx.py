@@ -10,6 +10,7 @@ from profile_v2.core.model import (DataSource, ProfileRequest, ProfileResponse,
                                    SuccessStatisticResult, TypedStatistic,
                                    UnsuccessfulStatisticResult,
                                    UnsuccessfulStatisticResultType)
+from profile_v2.core.model_utils import ModelCollections
 
 logger = logging.getLogger(__name__)
 
@@ -48,15 +49,12 @@ class GxProfileEngine(ProfileEngine):
             )
             logger.info(f"Table data asset added: {table_data_asset}")
             if request.batch.sample:
-                response.data.update(
-                    {
-                        statistic.fq_name: UnsuccessfulStatisticResult(
-                            type=UnsuccessfulStatisticResultType.UNSUPPORTED,
-                            message="Sampling not supported yet",
-                        )
-                        for statistic in request.statistics
-                    }
+                failed_response = ModelCollections.failed_response_for_request(
+                    request,
+                    UnsuccessfulStatisticResultType.UNSUPPORTED,
+                    "Sampling not supported yet",
                 )
+                response.update(failed_response)
                 return response
 
             table_batch_definition = table_data_asset.add_batch_definition_whole_table(

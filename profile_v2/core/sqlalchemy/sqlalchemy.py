@@ -78,7 +78,7 @@ class SqlAlchemyProfileEngine(ProfileEngine):
                     message=str(e),
                     exception=e,
                 )
-                response.data.update(failed_response_for_request.data)
+                response.update(failed_response_for_request)
             else:
                 self.report_successful_query()
 
