@@ -1,11 +1,13 @@
 import logging
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import Engine, create_engine, text
 from sqlglot.expressions import Select
 
 from profile_v2.core.api import ProfileEngine
 from profile_v2.core.model import (CustomStatistic, DataSource, DataSourceType,
+                                   ExpensivenessRequirements,
+                                   ProfileNonFunctionalRequirements,
                                    ProfileRequest, ProfileResponse,
                                    ProfileStatisticType,
                                    SuccessStatisticResult, TypedStatistic,
@@ -44,12 +46,108 @@ class SqlAlchemyProfileEngine(ProfileEngine):
             assert False, f"Unsupported datasource: {datasource.source}"
 
     def _do_profile(
-        self, datasource: DataSource, requests: List[ProfileRequest]
+        self,
+        datasource: DataSource,
+        requests: List[ProfileRequest],
+        non_functional_requirements: ProfileNonFunctionalRequirements = ProfileNonFunctionalRequirements(),
     ) -> ProfileResponse:
         response = ProfileResponse()
 
+        split = ModelCollections.group_request_by_statistics_predicate(
+            requests,
+            lambda statistic_spec: statistic_spec.is_table_level(),
+        )
+        table_level_requests = split[True]
+        column_level_requests = split[False]
+
         engine = SqlAlchemyProfileEngine.create_engine(datasource)
-        for request in requests:
+
+        self._process_table_level_requests(
+            table_level_requests,
+            datasource,
+            engine,
+            non_functional_requirements,
+            response,
+        )
+        self._process_column_level_requests(
+            column_level_requests, datasource, engine, response
+        )
+
+        return response
+
+    def _process_table_level_requests(
+        self,
+        table_level_requests: List[ProfileRequest],
+        datasource: DataSource,
+        engine: Engine,
+        non_functional_requirements: ProfileNonFunctionalRequirements,
+        response: ProfileResponse,
+    ):
+        if (
+            non_functional_requirements.expensiveness
+            == ExpensivenessRequirements.UNLIMITED
+        ):
+            for request in table_level_requests:
+                for statistic in request.statistics:
+                    sqlglot_friendly_table_name = (
+                        SqlAlchemyProfileEngine._sqlglotfriendly_table_name(
+                            request.batch.fq_dataset_name
+                        )
+                    )
+                    select_statement = (
+                        Select()
+                        .select("COUNT(*) AS row_count")
+                        .from_(sqlglot_friendly_table_name)
+                    )
+                    logger.info(f"Generic SQL statement: {select_statement}")
+                    dialect_select_statement = select_statement.sql(
+                        dialect=datasource.source.value
+                    )
+                    logger.info(
+                        f"Dialect-specific SQL statement: {dialect_select_statement}"
+                    )
+                    self.report_issue_query()
+                    try:
+                        column, value = next(
+                            self._execute_select(engine, dialect_select_statement)
+                        )
+                        response.data[statistic.fq_name] = SuccessStatisticResult(
+                            value=value
+                        )
+                    except Exception as e:
+                        self.report_unsuccessful_query(
+                            UnsuccessfulStatisticResultType.FAILURE
+                        )
+                        logger.error(f"Error profiling request: {request}")
+                        logger.exception(e)
+                        failed_response_for_request = ModelCollections.failed_response_for_request(
+                            request,
+                            unsuccessful_result_type=UnsuccessfulStatisticResultType.FAILURE,
+                            message=str(e),
+                            exception=e,
+                        )
+                        response.update(failed_response_for_request)
+                    else:
+                        self.report_successful_query()
+        else:
+            for request in table_level_requests:
+                not_matching_expensiveness_response = (
+                    ModelCollections.failed_response_for_request(
+                        request,
+                        UnsuccessfulStatisticResultType.SKIPPED,
+                        "Skipped because of expensiveness",
+                    )
+                )
+                response.update(not_matching_expensiveness_response)
+
+    def _process_column_level_requests(
+        self,
+        column_level_requests: List[ProfileRequest],
+        datasource: DataSource,
+        engine: Engine,
+        response: ProfileResponse,
+    ):
+        for request in column_level_requests:
             try:
                 select_statement, fq_name_mappings = self._generate_select_query(
                     request, response
@@ -81,8 +179,6 @@ class SqlAlchemyProfileEngine(ProfileEngine):
                 response.update(failed_response_for_request)
             else:
                 self.report_successful_query()
-
-        return response
 
     def _generate_select_query(
         self, request: ProfileRequest, response: ProfileResponse
@@ -142,7 +238,7 @@ class SqlAlchemyProfileEngine(ProfileEngine):
 
         return None, fq_name_mappings
 
-    def _execute_select(self, engine, select_query) -> Iterable[Tuple[str, Any]]:
+    def _execute_select(self, engine, select_query) -> Iterator[Tuple[str, Any]]:
         with engine.connect() as conn:
             result = conn.execute(text(select_query))
             # TODO: what if there are multiple rows? raise error?

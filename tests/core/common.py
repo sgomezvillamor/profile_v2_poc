@@ -7,7 +7,9 @@ from datetime import datetime
 from typing import List, Optional
 
 from profile_v2.core.api import ProfileEngine
-from profile_v2.core.model import (DataSource, ProfileRequest, ProfileResponse,
+from profile_v2.core.model import (DataSource,
+                                   ProfileNonFunctionalRequirements,
+                                   ProfileRequest, ProfileResponse,
                                    SuccessStatisticResult)
 
 logger = logging.getLogger(__name__)
@@ -34,7 +36,10 @@ class FixedResponseEngine(ProfileEngine):
         self.response = response
 
     def _do_profile(
-        self, datasource: DataSource, requests: List[ProfileRequest]
+        self,
+        datasource: DataSource,
+        requests: List[ProfileRequest],
+        non_functional_requirements: ProfileNonFunctionalRequirements = ProfileNonFunctionalRequirements(),
     ) -> ProfileResponse:
         return self.response
 
@@ -47,7 +52,10 @@ class SuccessResponseEngine(ProfileEngine):
         self.elapsed_time_millis = elapsed_time_millis
 
     def _do_profile(
-        self, datasource: DataSource, requests: List[ProfileRequest]
+        self,
+        datasource: DataSource,
+        requests: List[ProfileRequest],
+        non_functional_requirements: ProfileNonFunctionalRequirements = ProfileNonFunctionalRequirements(),
     ) -> ProfileResponse:
         response = ProfileResponse()
         if self.elapsed_time_millis:

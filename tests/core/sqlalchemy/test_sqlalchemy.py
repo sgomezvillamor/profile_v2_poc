@@ -2,10 +2,12 @@ import unittest
 from unittest.mock import Mock
 
 from profile_v2.core.model import (BatchSpec, CustomStatistic, DataSource,
-                                   DataSourceType, ProfileRequest,
-                                   ProfileResponse, ProfileStatisticType,
-                                   SampleSpec, SuccessStatisticResult,
-                                   TypedStatistic, UnsuccessfulStatisticResult,
+                                   DataSourceType, ExpensivenessRequirements,
+                                   ProfileNonFunctionalRequirements,
+                                   ProfileRequest, ProfileResponse,
+                                   ProfileStatisticType, SampleSpec,
+                                   SuccessStatisticResult, TypedStatistic,
+                                   UnsuccessfulStatisticResult,
                                    UnsuccessfulStatisticResultType)
 from profile_v2.core.sqlalchemy.sqlalchemy import SqlAlchemyProfileEngine
 from tests.core.common import (BIGQUERY_CONNECTION_STRING,
@@ -331,3 +333,45 @@ class TestSqlAlchemyProfileEngine(unittest.TestCase):
         # observed logs
         # INFO     profile_v2.core.sqlalchemy.sqlalchemy:sqlalchemy.py:54 Generic SQL statement: SELECT COUNT(UUID()) AS fq_name_1 FROM customer_demo.PurchaseEvent
         # INFO     profile_v2.core.sqlalchemy.sqlalchemy:sqlalchemy.py:58 Dialect-specific SQL statement: SELECT COUNT(GENERATE_UUID()) AS fq_name_1 FROM customer_demo.PurchaseEvent
+
+    def test_rowcount_if_expensiveness(self):
+        requests = [
+            ProfileRequest(
+                statistics=[
+                    TypedStatistic(
+                        fq_name="fq_name_1",
+                        type=ProfileStatisticType.TABLE_ROW_COUNT,
+                    ),
+                ],
+                batch=BatchSpec(
+                    fq_dataset_name=f"{SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.COVID19_EXTERNAL_TABLE",
+                ),
+            )
+        ]
+        engine = SqlAlchemyProfileEngine()
+
+        response = engine.profile(
+            datasource=self._snowflake_datasource,
+            requests=requests,
+            non_functional_requirements=ProfileNonFunctionalRequirements(
+                expensiveness=ExpensivenessRequirements.UNLIMITED
+            ),
+        )
+        print(response)
+        assert len(response.data) == 1
+        assert response.data["fq_name_1"] == SuccessStatisticResult(398880)
+
+        response = engine.profile(
+            datasource=self._snowflake_datasource,
+            requests=requests,
+            non_functional_requirements=ProfileNonFunctionalRequirements(
+                expensiveness=ExpensivenessRequirements.CHEAP
+            ),
+        )
+        print(response)
+        assert len(response.data) == 1
+        assert isinstance(response.data["fq_name_1"], UnsuccessfulStatisticResult)
+        assert (
+            response.data["fq_name_1"].type == UnsuccessfulStatisticResultType.SKIPPED
+        )
+        assert response.data["fq_name_1"].message == "Skipped because of expensiveness"

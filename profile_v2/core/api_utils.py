@@ -4,7 +4,9 @@ from copy import deepcopy
 from typing import Callable, List, Optional
 
 from profile_v2.core.api import ProfileEngine
-from profile_v2.core.model import (DataSource, ProfileRequest, ProfileResponse,
+from profile_v2.core.model import (DataSource,
+                                   ProfileNonFunctionalRequirements,
+                                   ProfileRequest, ProfileResponse,
                                    SuccessStatisticResult,
                                    UnsuccessfulStatisticResult)
 from profile_v2.core.model_utils import ModelCollections
@@ -24,7 +26,10 @@ class SequentialFallbackProfileEngine(ProfileEngine):
         self.engines = engines
 
     def _do_profile(
-        self, datasource: DataSource, requests: List[ProfileRequest]
+        self,
+        datasource: DataSource,
+        requests: List[ProfileRequest],
+        non_functional_requirements: ProfileNonFunctionalRequirements = ProfileNonFunctionalRequirements(),
     ) -> ProfileResponse:
         response = ProfileResponse()
 
@@ -94,7 +99,10 @@ class ParallelProfileEngine(ProfileEngine):
         self.group_requests_predicate = batch_requests_predicate
 
     def _do_profile(
-        self, datasource: DataSource, requests: List[ProfileRequest]
+        self,
+        datasource: DataSource,
+        requests: List[ProfileRequest],
+        non_functional_requirements: ProfileNonFunctionalRequirements = ProfileNonFunctionalRequirements(),
     ) -> ProfileResponse:
         response = ProfileResponse()
 

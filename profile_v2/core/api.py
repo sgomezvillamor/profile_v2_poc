@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from profile_v2.core.model import (DataSource, ProfileRequest, ProfileResponse,
+from profile_v2.core.model import (DataSource,
+                                   ProfileNonFunctionalRequirements,
+                                   ProfileRequest, ProfileResponse,
                                    UnsuccessfulStatisticResultType)
 from profile_v2.core.model_utils import ModelCollections
 from profile_v2.core.report import ProfileCoreReport
@@ -21,14 +23,20 @@ class ProfileEngine(ABC):
         self.report = report
 
     def profile(
-        self, datasource: DataSource, requests: List[ProfileRequest]
+        self,
+        datasource: DataSource,
+        requests: List[ProfileRequest],
+        non_functional_requirements: ProfileNonFunctionalRequirements = ProfileNonFunctionalRequirements(),
     ) -> ProfileResponse:
         self._requests_validations(requests)
-        return self._do_profile(datasource, requests)
+        return self._do_profile(datasource, requests, non_functional_requirements)
 
     @abstractmethod
     def _do_profile(
-        self, datasource: DataSource, requests: List[ProfileRequest]
+        self,
+        datasource: DataSource,
+        requests: List[ProfileRequest],
+        non_functional_requirements: ProfileNonFunctionalRequirements = ProfileNonFunctionalRequirements(),
     ) -> ProfileResponse:
         pass
 

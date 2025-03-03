@@ -5,10 +5,12 @@ from sqlalchemy import text
 
 from profile_v2.core.api import ProfileEngine
 from profile_v2.core.api_utils import ModelCollections, ParallelProfileEngine
-from profile_v2.core.model import (BatchSpec, DataSource, ProfileRequest,
-                                   ProfileResponse, ProfileStatisticType,
-                                   StatisticSpec, SuccessStatisticResult,
-                                   TypedStatistic, UnsuccessfulStatisticResult,
+from profile_v2.core.model import (BatchSpec, DataSource,
+                                   ProfileNonFunctionalRequirements,
+                                   ProfileRequest, ProfileResponse,
+                                   ProfileStatisticType, StatisticSpec,
+                                   SuccessStatisticResult, TypedStatistic,
+                                   UnsuccessfulStatisticResult,
                                    UnsuccessfulStatisticResultType)
 from profile_v2.core.report import ProfileCoreReport
 from profile_v2.core.sqlalchemy.sqlalchemy import SqlAlchemyProfileEngine
@@ -42,7 +44,10 @@ class BigQueryInformationSchemaProfileEngine(ProfileEngine):
         super().__init__(report)
 
     def _do_profile(
-        self, datasource: DataSource, requests: List[ProfileRequest]
+        self,
+        datasource: DataSource,
+        requests: List[ProfileRequest],
+        non_functional_requirements: ProfileNonFunctionalRequirements = ProfileNonFunctionalRequirements(),
     ) -> ProfileResponse:
         response = ProfileResponse()
 
@@ -185,7 +190,10 @@ class BigQueryProfileEngine(ProfileEngine):
         )
 
     def _do_profile(
-        self, datasource: DataSource, requests: List[ProfileRequest]
+        self,
+        datasource: DataSource,
+        requests: List[ProfileRequest],
+        non_functional_requirements: ProfileNonFunctionalRequirements = ProfileNonFunctionalRequirements(),
     ) -> ProfileResponse:
         response = ProfileResponse()
 

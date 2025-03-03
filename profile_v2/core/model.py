@@ -1,4 +1,4 @@
-from collections import defaultdict
+from abc import abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional, TypeAlias
@@ -27,10 +27,21 @@ dataset, optional column, optional partitions, statistic
 class StatisticSpec:
     fq_name: StatisticFQName
 
+    @abstractmethod
+    def is_table_level(self) -> bool:
+        pass
+
 
 @dataclass
 class CustomStatistic(StatisticSpec):
     sql: str
+
+    def is_table_level(self) -> bool:
+        return False
+
+    def is_column_level(self) -> bool:
+        # TODO: is this a fair assumption?
+        return True
 
 
 @dataclass
@@ -50,6 +61,12 @@ class TypedStatistic(StatisticSpec):
             raise ValueError(
                 f"Table-level TypedStatistic of type {self.type} must not set columns"
             )
+
+    def is_table_level(self) -> bool:
+        return self.type.is_table_level()
+
+    def is_column_level(self) -> bool:
+        return not self.type.is_column_level()
 
 
 @dataclass
@@ -129,3 +146,13 @@ class ProfileResponse:
 
     def update(self, other: "ProfileResponse"):
         self.data.update(other.data)
+
+
+class ExpensivenessRequirements(Enum):
+    CHEAP = "cheap"
+    UNLIMITED = "unlimited"
+
+
+@dataclass
+class ProfileNonFunctionalRequirements:
+    expensiveness: ExpensivenessRequirements = ExpensivenessRequirements.UNLIMITED

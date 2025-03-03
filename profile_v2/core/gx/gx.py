@@ -5,7 +5,9 @@ from typing import List
 import great_expectations as gx
 
 from profile_v2.core.api import ProfileEngine
-from profile_v2.core.model import (DataSource, ProfileRequest, ProfileResponse,
+from profile_v2.core.model import (DataSource,
+                                   ProfileNonFunctionalRequirements,
+                                   ProfileRequest, ProfileResponse,
                                    ProfileStatisticType,
                                    SuccessStatisticResult, TypedStatistic,
                                    UnsuccessfulStatisticResult,
@@ -29,7 +31,10 @@ class GxProfileEngine(ProfileEngine):
     """
 
     def _do_profile(
-        self, datasource: DataSource, requests: List[ProfileRequest]
+        self,
+        datasource: DataSource,
+        requests: List[ProfileRequest],
+        non_functional_requirements: ProfileNonFunctionalRequirements = ProfileNonFunctionalRequirements(),
     ) -> ProfileResponse:
         response = ProfileResponse()
         context = gx.get_context()

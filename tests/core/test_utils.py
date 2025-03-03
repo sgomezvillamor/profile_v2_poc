@@ -7,9 +7,10 @@ from pytest import approx
 
 from profile_v2.core.api_utils import (ModelCollections, ParallelProfileEngine,
                                        SequentialFallbackProfileEngine)
-from profile_v2.core.model import (BatchSpec, DataSource, DataSourceType,
-                                   ProfileRequest, ProfileResponse,
-                                   StatisticSpec, SuccessStatisticResult,
+from profile_v2.core.model import (BatchSpec, CustomStatistic, DataSource,
+                                   DataSourceType, ProfileRequest,
+                                   ProfileResponse, StatisticSpec,
+                                   SuccessStatisticResult,
                                    UnsuccessfulStatisticResult,
                                    UnsuccessfulStatisticResultType)
 from tests.core.common import FixedResponseEngine, SuccessResponseEngine
@@ -460,22 +461,22 @@ class TestParallelProfileEngine(unittest.TestCase):
     _requests = [
         ProfileRequest(
             statistics=[
-                StatisticSpec(fq_name="fq_stat1_1"),
-                StatisticSpec(fq_name="fq_stat2_1"),
+                CustomStatistic(fq_name="fq_stat1_1", sql="1"),
+                CustomStatistic(fq_name="fq_stat2_1", sql="1"),
             ],
             batch=BatchSpec(fq_dataset_name="batch1"),
         ),
         ProfileRequest(
             statistics=[
-                StatisticSpec(fq_name="fq_stat1_2"),
-                StatisticSpec(fq_name="fq_stat2_2"),
+                CustomStatistic(fq_name="fq_stat1_2", sql="1"),
+                CustomStatistic(fq_name="fq_stat2_2", sql="1"),
             ],
             batch=BatchSpec(fq_dataset_name="batch2"),
         ),
         ProfileRequest(
             statistics=[
-                StatisticSpec(fq_name="fq_stat1_3"),
-                StatisticSpec(fq_name="fq_stat2_3"),
+                CustomStatistic(fq_name="fq_stat1_3", sql="1"),
+                CustomStatistic(fq_name="fq_stat2_3", sql="1"),
             ],
             batch=BatchSpec(fq_dataset_name="batch3"),
         ),
