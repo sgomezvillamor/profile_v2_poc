@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 import unittest
@@ -5,12 +6,14 @@ from typing import List
 
 from pytest import approx
 
-from profile_v2.core.api_utils import (ModelCollections, ParallelProfileEngine,
+from profile_v2.core.api_utils import (AsyncProfileEngine, ModelCollections,
+                                       ParallelProfileEngine,
                                        SequentialFallbackProfileEngine)
 from profile_v2.core.model import (BatchSpec, CustomStatistic, DataSource,
-                                   DataSourceType, ProfileRequest,
-                                   ProfileResponse, StatisticSpec,
-                                   SuccessStatisticResult,
+                                   DataSourceType,
+                                   ProfileNonFunctionalRequirements,
+                                   ProfileRequest, ProfileResponse,
+                                   StatisticSpec, SuccessStatisticResult,
                                    UnsuccessfulStatisticResult,
                                    UnsuccessfulStatisticResultType)
 from tests.core.common import FixedResponseEngine, SuccessResponseEngine
@@ -543,3 +546,47 @@ class TestParallelProfileEngine(unittest.TestCase):
         assert response == self._expected_response
         # all 6 statistics in individual batches, so elapsed time should be statistics=6/workers=2 = 3 seconds
         assert elapsed_time == approx(3, abs=0.1)
+
+
+class TestAsyncProfileEngine(unittest.TestCase):
+
+    def setUp(self):
+        self.loop = asyncio.new_event_loop()
+
+        self.requests = [
+            ProfileRequest(
+                statistics=[
+                    CustomStatistic(fq_name="fq_stat1_1", sql="1"),
+                    CustomStatistic(fq_name="fq_stat1_2", sql="2"),
+                ],
+                batch=BatchSpec(fq_dataset_name="batch1"),
+            )
+        ]
+        self.response = ProfileResponse(
+            data={
+                "fq_stat1_1": SuccessStatisticResult(value=1),
+                "fq_stat1_2": SuccessStatisticResult(value=2),
+            }
+        )
+        self.engine = FixedResponseEngine(self.response)
+        self.async_engine = AsyncProfileEngine(self.engine, self.loop)
+        self.datasource = DataSource(
+            source=DataSourceType.SNOWFLAKE, connection_string="connection_string1"
+        )
+        self.non_functional_requirements = ProfileNonFunctionalRequirements()
+
+    def tearDown(self):
+        self.loop.close()
+
+    def test_profile(self):
+        async def test_coroutine():
+            future = self.async_engine.profile(
+                self.datasource, self.requests, self.non_functional_requirements
+            )
+            assert isinstance(future, asyncio.Future)
+            print(future)
+            await future  # Wait until the future is completed
+            assert future.done()
+            assert future.result() == self.response
+
+        self.loop.run_until_complete(test_coroutine())

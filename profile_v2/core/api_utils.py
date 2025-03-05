@@ -1,6 +1,8 @@
+import asyncio
 import concurrent.futures
 import logging
 from copy import deepcopy
+from dataclasses import dataclass
 from typing import Callable, List, Optional
 
 from profile_v2.core.api import ProfileEngine
@@ -128,3 +130,55 @@ class ParallelProfileEngine(ProfileEngine):
                 response.update(batch_response)
 
         return response
+
+
+class AsyncProfileEngine:
+
+    @dataclass
+    class _QueuePayload:
+        datasource: DataSource
+        requests: List[ProfileRequest]
+        non_functional_requirements: ProfileNonFunctionalRequirements
+        future: asyncio.Future
+
+    def __init__(
+        self, engine: ProfileEngine, loop: Optional[asyncio.AbstractEventLoop] = None
+    ):
+        self.engine = engine
+        self.queue: asyncio.Queue = asyncio.Queue()
+        self.loop = loop or asyncio.get_event_loop()
+        self.loop.create_task(self._consume_queue())
+
+    def profile(
+        self,
+        datasource: DataSource,
+        requests: List[ProfileRequest],
+        non_functional_requirements: ProfileNonFunctionalRequirements = ProfileNonFunctionalRequirements(),
+    ) -> asyncio.Future:
+        future = self.loop.create_future()
+        self.loop.call_soon_threadsafe(
+            self.queue.put_nowait,
+            AsyncProfileEngine._QueuePayload(
+                datasource, requests, non_functional_requirements, future
+            ),
+        )
+        return future
+
+    async def _consume_queue(self):
+        while True:
+            queue_payload: AsyncProfileEngine._QueuePayload = (
+                # TODO: we could fetch multiple items from the queue
+                await self.queue.get()
+            )
+            try:
+                response = await asyncio.to_thread(
+                    self.engine.profile,
+                    queue_payload.datasource,
+                    queue_payload.requests,
+                    queue_payload.non_functional_requirements,
+                )
+                queue_payload.future.set_result(response)
+            except Exception as e:
+                queue_payload.future.set_exception(e)
+            finally:
+                self.queue.task_done()
